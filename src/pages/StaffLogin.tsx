@@ -181,9 +181,21 @@ export const StaffLogin: React.FC = () => {
               </div>
             )}
 
-            {isDemoMode && activeTab === 'signup' && (
-              <div className="mb-5 p-3 bg-amber-50 border border-amber-100 text-amber-900 rounded-xl text-xs font-mono">
-                ⚡ Sandbox Mode: Staff register instantly to browser storage.
+            {isDemoMode ? (
+              activeTab === 'signup' && (
+                <div className="mb-5 p-3 bg-amber-50 border border-amber-100 text-amber-900 rounded-xl text-xs font-mono">
+                  ⚡ Sandbox Mode: Staff register instantly to browser storage.
+                </div>
+              )
+            ) : (
+              <div className="mb-5 p-4 bg-emerald-50 border border-emerald-100 text-emerald-950 rounded-2xl text-xs space-y-1.5 font-sans">
+                <div className="font-bold text-emerald-800 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Supabase Live Database Connected
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[11px]">
+                  Pre-seeded sandbox accounts are not available in live mode. Please click the <strong className="text-tomato font-bold">Register Staff</strong> tab above to create your live account first.
+                </p>
               </div>
             )}
 

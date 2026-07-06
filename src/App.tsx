@@ -12,6 +12,7 @@ import { AdminLogin } from './pages/AdminLogin';
 import { StaffLogin } from './pages/StaffLogin';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { StaffDashboard } from './pages/StaffDashboard';
+import { CustomerPortal } from './pages/CustomerPortal';
 
 export default function App() {
   return (
@@ -20,6 +21,9 @@ export default function App() {
         <Routes>
           {/* Guest Home Portal */}
           <Route path="/" element={<Home />} />
+          
+          {/* Customer Storefront (Phase 2) */}
+          <Route path="/customer" element={<CustomerPortal />} />
 
           {/* Authentication Portals */}
           <Route path="/admin/login" element={<AdminLogin />} />

@@ -18,3 +18,32 @@ export interface AuthState {
   loading: boolean;
   error: string | null;
 }
+
+export interface Pizza {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  image: string;
+}
+
+export interface PizzaBase {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface PizzaTopping {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface CartItem {
+  id: string;
+  pizza: Pizza;
+  quantity: number;
+  selectedBase: PizzaBase;
+  selectedToppings: PizzaTopping[];
+}
+

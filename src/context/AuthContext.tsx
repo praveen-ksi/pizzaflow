@@ -249,20 +249,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { user: authUser }, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              full_name: fullName,
+              role: role,
+            }
+          }
         });
 
         if (signUpError) throw signUpError;
         if (!authUser) throw new Error('Failed to create account.');
 
-        // Create profile in DB
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: authUser.id,
-          role,
-          full_name: fullName,
-          created_at: new Date().toISOString(),
-        });
+        // Delay briefly to allow any database trigger to finish executing
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        if (profileError) throw profileError;
+        // Check if profile was already created automatically by a database trigger
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', authUser.id)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          // Fallback: Create profile manually in DB (if trigger wasn't set up yet)
+          const { error: profileError } = await supabase.from('profiles').insert({
+            id: authUser.id,
+            role,
+            full_name: fullName,
+            created_at: new Date().toISOString(),
+          });
+
+          if (profileError) {
+            // Handle RLS/Permission blocks due to unconfirmed emails
+            if (profileError.code === '42501' || profileError.message.toLowerCase().includes('row-level security') || profileError.message.toLowerCase().includes('permission denied')) {
+              console.warn('Profile insert blocked by RLS. This is normal if email confirmation is enabled.');
+              throw new Error(
+                'Registration succeeded on Supabase Auth, but saving your profile was blocked. ' +
+                'This happens when "Confirm Email" is enabled in your Supabase Dashboard. ' +
+                'Please click the confirmation link sent to your email, or disable "Confirm Email" under Auth > Providers > Email to enable instant logins.'
+              );
+            }
+            throw profileError;
+          }
+        }
       } catch (err: any) {
         setError(err.message || 'Registration failed.');
         throw err;

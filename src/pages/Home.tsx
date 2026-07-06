@@ -60,28 +60,35 @@ export const Home: React.FC = () => {
       <section className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
         
         {/* Customer Guest Card */}
-        <div className="bg-slate-50/50 border border-slate-200/60 rounded-3xl p-8 flex flex-col justify-between relative overflow-hidden shadow-xs">
+        <Link
+          to="/customer"
+          id="card-customer-portal"
+          className="bg-white border border-slate-200 hover:border-tomato/30 rounded-3xl p-8 flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-tomato/5 group"
+        >
           <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <div className="p-3 bg-slate-100 border border-slate-200 text-slate-400 rounded-2xl">
+              <div className="p-3 bg-tomato/5 border border-tomato/10 text-tomato rounded-2xl group-hover:scale-105 transition duration-300">
                 <Pizza size={22} />
               </div>
-              <span className="text-[10px] font-mono tracking-widest bg-slate-100 text-slate-500 px-3 py-1 rounded-full border border-slate-200 font-bold">
-                PHASE 2
+              <span className="text-[10px] font-mono tracking-widest bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-100 font-bold">
+                ACTIVE
               </span>
             </div>
             <div>
-              <h3 className="text-lg font-bold font-display text-slate-400">Customer Guest</h3>
-              <p className="text-slate-500 text-xs mt-1.5 leading-relaxed font-sans">
+              <h3 className="text-lg font-bold font-display text-slate-950 group-hover:text-tomato transition-colors">Customer Guest</h3>
+              <p className="text-slate-600 text-xs mt-1.5 leading-relaxed font-sans">
                 Browse gourmet menus, craft bespoke custom recipes, specify dynamic toppings, and submit guest orders directly.
               </p>
             </div>
           </div>
-          <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-mono text-slate-400 font-semibold">
-            <span>UNAUTHENTICATED</span>
-            <span className="italic">In Production</span>
+          <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-mono text-slate-500 font-bold">
+            <span>ROLE: GUEST</span>
+            <span className="flex items-center gap-1 group-hover:text-tomato transition-colors">
+              Access Store
+              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+            </span>
           </div>
-        </div>
+        </Link>
 
         {/* Staff Operations Card */}
         <Link
