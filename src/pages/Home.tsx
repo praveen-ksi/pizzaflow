@@ -25,7 +25,7 @@ export const Home: React.FC = () => {
             Slice<span className="text-tomato">matic</span>
           </span>
         </div>
-        <div className="flex items-center gap-2 font-mono text-xs text-slate-600 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-xs">
+        <div className="hidden sm:flex items-center gap-2 font-mono text-xs text-slate-600 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-xs">
           <Pizza size={13} className="text-tomato" />
           <span>DINE-IN & TAKEAWAY AVAILABLE</span>
         </div>

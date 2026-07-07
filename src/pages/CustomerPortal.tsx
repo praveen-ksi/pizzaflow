@@ -313,13 +313,14 @@ export const CustomerPortal: React.FC = () => {
           </div>
 
           {/* Order Tracking & Status Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setIsTrackModalOpen(true)}
-              className="px-3.5 py-2 rounded-full font-bold text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200/50 transition duration-300 flex items-center gap-1.5"
+              title="Track Order"
+              className="px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full font-bold text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200/50 transition duration-300 flex items-center gap-1"
             >
               <Search size={13} />
-              <span>Track Order</span>
+              <span className="hidden sm:inline">Track Order</span>
             </button>
 
             {(() => {
@@ -330,15 +331,16 @@ export const CustomerPortal: React.FC = () => {
               return (
                 <button
                   onClick={() => setIsStatusOpen(true)}
-                  className={`px-3.5 py-2 rounded-full font-bold text-xs transition duration-300 flex items-center gap-1.5 border shadow-xs hover:scale-105 active:scale-95 ${
+                  title="View Live Status"
+                  className={`px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full font-bold text-xs transition duration-300 flex items-center gap-1 border shadow-xs hover:scale-105 active:scale-95 ${
                     activeOrder.status === 'Dispatched'
                       ? 'border-emerald-500 text-emerald-700 bg-emerald-50/85 hover:bg-emerald-100 hover:border-emerald-600'
                       : 'border-amber-400 text-amber-700 bg-amber-50/85 hover:bg-amber-100 hover:border-amber-500'
                   }`}
                 >
                   <Clock size={13} className={activeOrder.status === 'Baking' ? "animate-spin text-tomato" : "animate-pulse text-amber-500"} />
-                  <span>Order Status</span>
-                  <span className="font-mono bg-white px-1.5 py-0.5 rounded-md text-[9px] border border-inherit text-slate-800">
+                  <span className="hidden sm:inline">Order Status</span>
+                  <span className="font-mono bg-white px-1.5 py-0.5 rounded-md text-[9px] border border-inherit text-slate-800 shrink-0">
                     #{activeOrder.token_number}
                   </span>
                 </button>
