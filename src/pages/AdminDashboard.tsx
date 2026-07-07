@@ -22,10 +22,11 @@ import {
   FileText,
   Sliders,
   Database,
-  Upload
+  Upload,
+  Sparkles
 } from 'lucide-react';
-import { SetupAssistant } from '../components/SetupAssistant';
 import { OrdersDashboard } from '../components/OrdersDashboard';
+import { AIForecast } from '../components/AIForecast';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   loadPizzas,
@@ -45,8 +46,8 @@ import { Pizza as PizzaType, PizzaBase as BaseType, PizzaTopping as ToppingType 
 export const AdminDashboard: React.FC = () => {
   const { user, profile, signOut, isDemoMode } = useAuth();
   
-  // Tab states: 'overview' | 'pizzas' | 'bases' | 'toppings' | 'data-import'
-  const [activeTab, setActiveTab] = useState<'overview' | 'pizzas' | 'bases' | 'toppings' | 'data-import'>('overview');
+  // Tab states: 'overview' | 'pizzas' | 'bases' | 'toppings' | 'data-import' | 'forecast'
+  const [activeTab, setActiveTab] = useState<'overview' | 'pizzas' | 'bases' | 'toppings' | 'data-import' | 'forecast'>('overview');
   
   // Table states
   const [pizzas, setPizzas] = useState<PizzaType[]>([]);
@@ -482,20 +483,18 @@ export const AdminDashboard: React.FC = () => {
                 Welcome Back, {profile?.full_name || 'Chef'}!
               </h1>
               <p className="text-white/90 text-sm mt-1.5 max-w-xl leading-relaxed">
-                The PizzaFlow administrative dashboard is connected. Manage configuration tables (pizzas, bases, toppings) directly and update user roles.
+                The PizzaFlow administrative dashboard is active. Manage menu options, update item pricing, customize recipes, and assign team roles with full oversight.
               </p>
             </div>
             
             <div className="flex flex-wrap gap-2 font-mono text-xs text-white">
               <div className="bg-black/15 px-3 py-1.5 rounded-lg border border-white/10">
-                <span className="opacity-75">ROLE: </span>
-                <span className="font-bold">ADMIN</span>
+                <span className="opacity-75">PORTAL: </span>
+                <span className="font-bold">ADMINISTRATION</span>
               </div>
               <div className="bg-black/15 px-3 py-1.5 rounded-lg border border-white/10">
-                <span className="opacity-75">ENVIRONMENT: </span>
-                <span className="font-bold">
-                  {isDemoMode ? 'SANDBOX' : 'PRODUCTION'}
-                </span>
+                <span className="opacity-75">STATUS: </span>
+                <span className="font-bold">LIVE OVERVIEW</span>
               </div>
             </div>
           </div>
@@ -530,7 +529,8 @@ export const AdminDashboard: React.FC = () => {
               { id: 'pizzas', label: 'Gourmet Pizzas', icon: Pizza },
               { id: 'bases', label: 'Crust Bases', icon: ChefHat },
               { id: 'toppings', label: 'Toppings Manager', icon: Sliders },
-              { id: 'data-import', label: 'Data Import API', icon: Database }
+              { id: 'data-import', label: 'Data Import API', icon: Database },
+              { id: 'forecast', label: 'AI Demand Forecast', icon: Sparkles }
             ].map((tab) => {
               const TabIcon = tab.icon;
               const isSelected = activeTab === tab.id;
@@ -1233,6 +1233,11 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
             </div>
+          )}
+
+          {/* TAB: AI DEMAND FORECAST */}
+          {activeTab === 'forecast' && (
+            <AIForecast pizzas={pizzas} bases={bases} toppings={toppings} />
           )}
 
         </div>

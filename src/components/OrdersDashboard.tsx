@@ -185,6 +185,8 @@ export const OrdersDashboard: React.FC<OrdersDashboardProps> = ({
   const [activeAnalysisTab, setActiveAnalysisTab] = useState<'trends' | 'popular' | 'customizations'>('trends');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [timeRange, setTimeRange] = useState<'all' | '2h' | 'today' | '24h' | '7d'>('all');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   // Load and sync orders from database or simulated storage
   const loadOrders = async () => {
@@ -344,7 +346,32 @@ export const OrdersDashboard: React.FC<OrdersDashboardProps> = ({
       ord.id.toLowerCase().includes(query) ||
       ord.customer_phone.toLowerCase().includes(query) ||
       ord.items.some(i => i.pizza_name.toLowerCase().includes(query));
-    return matchesStatus && matchesSearch;
+
+    // Time Range Filter
+    const createdTime = new Date(ord.created_at).getTime();
+    const now = Date.now();
+    let matchesTime = true;
+    
+    if (timeRange === '2h') {
+      matchesTime = (now - createdTime) <= 2 * 60 * 60 * 1000;
+    } else if (timeRange === 'today') {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      matchesTime = createdTime >= todayStart.getTime();
+    } else if (timeRange === '24h') {
+      matchesTime = (now - createdTime) <= 24 * 60 * 60 * 1000;
+    } else if (timeRange === '7d') {
+      matchesTime = (now - createdTime) <= 7 * 24 * 60 * 60 * 1000;
+    }
+
+    return matchesStatus && matchesSearch && matchesTime;
+  });
+
+  // Sort orders by created_at based on sortOrder ('newest' or 'oldest')
+  const sortedAndFilteredOrders = [...filteredOrders].sort((a, b) => {
+    const timeA = new Date(a.created_at).getTime();
+    const timeB = new Date(b.created_at).getTime();
+    return sortOrder === 'newest' ? timeB - timeA : timeA - timeB;
   });
 
   const getStatusBadgeClass = (status: string) => {
@@ -600,10 +627,10 @@ export const OrdersDashboard: React.FC<OrdersDashboardProps> = ({
           <div>
             <h3 className="text-lg font-extrabold text-slate-900 font-display flex items-center gap-2">
               <ShoppingBag size={18} className="text-tomato" />
-              Active Orders & Dispatch Queue
+              Orders Directory & Archives
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Live tracking board. Update order states instantly or filter customer submissions in real time.
+              Read-only system log. Admin cannot alter order states or delete records.
             </p>
           </div>
 
@@ -630,259 +657,175 @@ export const OrdersDashboard: React.FC<OrdersDashboardProps> = ({
                 </button>
               ))}
             </div>
-
-            {/* Utility buttons */}
-            <button
-              onClick={handleResetToSeed}
-              title="Seed orders"
-              className="p-2 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-xl text-slate-500 transition duration-150"
-            >
-              <RefreshCw size={13} />
-            </button>
-            <button
-              onClick={handleClearAllOrders}
-              title="Clear all"
-              className="p-2 border border-rose-200 hover:border-rose-300 hover:bg-rose-50 rounded-xl text-rose-500 transition duration-150"
-            >
-              <Trash2 size={13} />
-            </button>
           </div>
         </div>
 
-        {/* Search bar input */}
-        <div className="flex gap-2">
-          <input
-            id="input-search-orders"
-            type="text"
-            placeholder="Search orders by Client Name, Pizza Name, Order ID, or Phone..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-tomato focus:ring-1 focus:ring-tomato/15 transition"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="px-3 text-xs font-semibold text-slate-400 hover:text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50"
-            >
-              Clear
-            </button>
-          )}
+        {/* Search, Time Filter & Sorting Panel */}
+        <div className="space-y-4">
+          {/* Search bar input */}
+          <div className="flex gap-2">
+            <input
+              id="input-search-orders"
+              type="text"
+              placeholder="Search orders by Client Name, Pizza Name, Order ID, or Phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-tomato focus:ring-1 focus:ring-tomato/15 transition"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="px-3 text-xs font-semibold text-slate-400 hover:text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* Time Filter & Sort Row */}
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+            {/* Time Range Selector */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase flex items-center gap-1">
+                <Calendar size={11} className="text-slate-400" />
+                Time Filter:
+              </span>
+              <div className="bg-white border border-slate-200/80 p-0.5 rounded-lg flex shadow-2xs">
+                {[
+                  { id: 'all', label: 'All Time' },
+                  { id: '2h', label: 'Last 2 hrs' },
+                  { id: 'today', label: 'Today' },
+                  { id: '24h', label: 'Last 24 hrs' },
+                  { id: '7d', label: 'Last 7 days' }
+                ].map((range) => (
+                  <button
+                    key={range.id}
+                    type="button"
+                    onClick={() => setTimeRange(range.id as any)}
+                    className={`py-1 px-2.5 rounded-md text-[10px] font-bold transition-all ${
+                      timeRange === range.id
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sort Order Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase flex items-center gap-1">
+                <Sliders size={11} className="text-slate-400" />
+                Sort:
+              </span>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as any)}
+                className="py-1 px-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 focus:outline-none focus:border-tomato focus:ring-1 focus:ring-tomato/20"
+              >
+                <option value="newest">Created At: Newest First</option>
+                <option value="oldest">Created At: Oldest First</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        {/* Filtered Orders Rendering */}
-        <div className="space-y-4">
-          <AnimatePresence mode="popLayout">
-            {filteredOrders.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="py-16 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40 space-y-3"
-              >
-                <ShoppingBag size={24} className="text-slate-300 mx-auto" />
-                <div className="space-y-1">
-                  <p className="text-xs font-extrabold text-slate-700">No matching orders found</p>
-                  <p className="text-[10px] text-slate-400">
-                    {filterStatus === 'all' 
-                      ? "The dispatch list is currently empty. Try placing a pizza order from the customer portal!"
-                      : `No orders are currently in the "${filterStatus}" status state.`}
-                  </p>
-                </div>
-                {orders.length === 0 && (
-                  <button
-                    onClick={handleResetToSeed}
-                    className="py-1.5 px-3.5 bg-tomato hover:bg-tomato-hover text-white text-2xs font-extrabold rounded-lg shadow-sm transition"
-                  >
-                    Seed Simulated Orders
-                  </button>
-                )}
-              </motion.div>
-            ) : (
-              filteredOrders.map((order) => (
-                <motion.div
-                  key={order.id}
-                  layout
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-300/80 hover:shadow-xs transition duration-200 flex flex-col md:flex-row justify-between gap-5 relative overflow-hidden"
-                >
-                  
-                  {/* Status Sidebar Colored Highlight Indicator */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${
-                    order.status === 'Preparing' ? 'bg-amber-400' :
-                    order.status === 'Baking' ? 'bg-orange-500' :
-                    order.status === 'Dispatched' ? 'bg-blue-500' :
-                    'bg-emerald-500'
-                  }`} />
+        {/* Read-Only Table View */}
+        <div className="overflow-x-auto border border-slate-200 rounded-2xl bg-white shadow-2xs">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-wider">
+                <th className="py-3.5 px-4 font-mono font-black text-slate-400">Order ID</th>
+                <th className="py-3.5 px-4">Created At</th>
+                <th className="py-3.5 px-4">Customer Details</th>
+                <th className="py-3.5 px-4">Items Ordered</th>
+                <th className="py-3.5 px-4">Payment</th>
+                <th className="py-3.5 px-4">Total Amount</th>
+                <th className="py-3.5 px-4">Oven Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+              {sortedAndFilteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-16 text-center text-slate-400 font-medium">
+                    <ShoppingBag size={24} className="text-slate-300 mx-auto mb-2" />
+                    No orders matching the current filter and search settings.
+                  </td>
+                </tr>
+              ) : (
+                sortedAndFilteredOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-slate-50/50 transition duration-150">
+                    {/* Order ID */}
+                    <td className="py-4 px-4 font-mono font-bold text-slate-500">
+                      {order.id}
+                    </td>
 
-                  {/* Left segment: Customer & Metadata */}
-                  <div className="space-y-3.5 flex-1 pl-2">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      <span className="text-[10px] font-mono font-black text-slate-400 uppercase">
-                        {order.id}
-                      </span>
-                      <span className="text-[10px] text-slate-300">•</span>
-                      <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1">
-                        <Calendar size={11} />
-                        {new Date(order.created_at).toLocaleString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                      <span className="text-[10px] text-slate-300">•</span>
-                      <span className="text-[10px] font-mono font-bold text-tomato bg-tomato/5 border border-tomato/10 px-2 py-0.5 rounded">
-                        {order.payment_method}
-                      </span>
-                    </div>
+                    {/* Created At */}
+                    <td className="py-4 px-4 whitespace-nowrap text-slate-600 font-mono text-[11px]">
+                      {new Date(order.created_at).toLocaleString('en-IN', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </td>
 
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-bold text-slate-900 font-sans flex items-center gap-1.5">
-                        <User size={13} className="text-slate-400" />
-                        {order.customer_name}
-                      </h4>
-                      <p className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-                        <Phone size={11} />
-                        {order.customer_phone}
-                      </p>
-                    </div>
+                    {/* Customer Info */}
+                    <td className="py-4 px-4">
+                      <div className="font-bold text-slate-900">{order.customer_name}</div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">{order.customer_phone}</div>
+                    </td>
 
-                    {/* Order Items Specification */}
-                    <div className="bg-slate-50/70 border border-slate-100/60 p-3 rounded-xl space-y-1.5 max-w-xl">
-                      {order.items.map((item, idx) => (
-                        <div key={idx} className="text-xs text-slate-700 flex flex-wrap items-baseline justify-between gap-2">
-                          <div className="flex flex-wrap items-baseline gap-1.5">
-                            <span className="font-extrabold text-tomato font-mono bg-tomato/5 px-1.5 py-0.5 rounded text-[10px]">
-                              {item.quantity}x
-                            </span>
-                            <span className="font-bold text-slate-800">{item.pizza_name}</span>
-                            <span className="text-slate-300 text-2xs">({item.base_name})</span>
-                            {item.toppings.length > 0 && (
-                              <span className="text-slate-400 text-[10px] truncate max-w-[200px] sm:max-w-[320px]">
-                                + {item.toppings.join(', ')}
+                    {/* Items Ordered */}
+                    <td className="py-4 px-4 max-w-sm">
+                      <div className="space-y-1">
+                        {order.items.map((item, idx) => (
+                          <div key={idx} className="flex flex-col gap-0.5">
+                            <div className="flex items-baseline gap-1">
+                              <span className="font-bold text-tomato font-mono text-[10px] bg-tomato/5 px-1 rounded">
+                                {item.quantity}x
                               </span>
+                              <span className="font-semibold text-slate-800">{item.pizza_name}</span>
+                              <span className="text-[10px] text-slate-400">({item.base_name})</span>
+                            </div>
+                            {item.toppings.length > 0 && (
+                              <div className="text-[10px] text-slate-400 ml-5 font-medium leading-tight">
+                                Toppings: {item.toppings.join(', ')}
+                              </div>
                             )}
                           </div>
-                          <span className="font-mono text-slate-500 text-2xs font-bold">
-                            ₹{item.single_price * item.quantity}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Right segment: Order price & Status management */}
-                  <div className="flex flex-col justify-between items-start md:items-end gap-4 md:w-56 shrink-0 md:text-right border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-5">
-                    
-                    <div className="space-y-0.5 w-full">
-                      <div className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">
-                        Amount Payable
+                        ))}
                       </div>
-                      <div className="text-lg font-black text-slate-900 font-mono">
-                        ₹{order.total}
-                      </div>
-                    </div>
+                    </td>
 
-                    {/* Interactive workflow management */}
-                    <div className="flex flex-col sm:flex-row md:flex-col items-stretch sm:items-center md:items-stretch gap-2 w-full">
-                      
-                      {/* Dropdown / action triggers */}
-                      <div className="relative group/status w-full">
-                        <div className={`flex items-center justify-between gap-1.5 px-3 py-2 border rounded-xl text-xs font-bold cursor-pointer transition ${getStatusBadgeClass(order.status)}`}>
-                          <span className="flex items-center gap-1.5">
-                            {getStatusIcon(order.status)}
-                            {order.status}
-                          </span>
-                          <ChevronDown size={12} className="text-slate-400" />
-                        </div>
+                    {/* Payment Method */}
+                    <td className="py-4 px-4">
+                      <span className="inline-block text-[10px] font-mono font-bold text-tomato bg-tomato/5 border border-tomato/10 px-2 py-0.5 rounded">
+                        {order.payment_method}
+                      </span>
+                    </td>
 
-                        {/* Status dropdown options panel */}
-                        <div className="absolute right-0 bottom-full sm:bottom-auto sm:top-full mt-1.5 z-20 w-full min-w-[130px] bg-slate-950 border border-slate-800 rounded-xl p-1 shadow-xl invisible opacity-0 group-hover/status:visible group-hover/status:opacity-100 transition duration-150 text-left">
-                          {(['Preparing', 'Baking', 'Dispatched', 'Delivered'] as const).map((nextSt) => (
-                            <button
-                              key={nextSt}
-                              onClick={() => handleUpdateStatus(order.id, nextSt)}
-                              className={`w-full py-1.5 px-2.5 rounded-lg text-left text-[10px] font-bold text-slate-300 hover:text-white hover:bg-slate-900 flex items-center gap-1.5 transition ${
-                                order.status === nextSt ? 'bg-tomato/10 text-tomato font-black' : ''
-                              }`}
-                            >
-                              {getStatusIcon(nextSt)}
-                              {nextSt}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                    {/* Total Amount */}
+                    <td className="py-4 px-4 font-mono font-bold text-slate-950">
+                      ₹{order.total}
+                    </td>
 
-                      {/* Cancel order trigger */}
-                      <button
-                        onClick={() => handleDeleteOrder(order.id)}
-                        className="py-1.5 px-3 rounded-xl border border-rose-100 hover:border-rose-200 bg-rose-50/30 hover:bg-rose-50 text-rose-500 hover:text-rose-600 font-bold text-2xs uppercase tracking-wider transition flex items-center justify-center gap-1"
-                      >
-                        <Trash2 size={11} />
-                        Delete Order
-                      </button>
-
-                    </div>
-
-                  </div>
-
-                </motion.div>
-              ))
-            )}
-          </AnimatePresence>
+                    {/* Read-Only Status Badge */}
+                    <td className="py-4 px-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(order.status)}`}>
+                        {getStatusIcon(order.status)}
+                        {order.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
-      </div>
-
-      {/* 4. Connected Store Data Sources */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-[28px] p-6 text-white space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h4 className="text-sm font-extrabold font-mono uppercase tracking-wider text-tomato flex items-center gap-1.5">
-              <Database size={15} />
-              Connected Data Imports Integration
-            </h4>
-            <p className="text-xs text-slate-400">
-              Your pizza customization formulas can be bulk uploaded via our semicolon CSV parser.
-            </p>
-          </div>
-          <button
-            onClick={() => onSwitchTab('data-import')}
-            className="self-start sm:self-auto py-2 px-4 bg-tomato hover:bg-tomato-hover text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-tomato/20"
-          >
-            <Database size={13} />
-            Go to Data Import API
-          </button>
-        </div>
-
-        {/* Small cards listing configurations */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
-          {[
-            { label: 'Gourmet Pizzas', count: pizzasCount, type: 'pizzas', icon: PizzaIcon, color: 'text-tomato bg-tomato/10' },
-            { label: 'Crust Bases', count: basesCount, type: 'bases', icon: Layers, color: 'text-amber-500 bg-amber-500/10' },
-            { label: 'Topping Items', count: toppingsCount, type: 'toppings', icon: Sliders, color: 'text-blue-500 bg-blue-500/10' }
-          ].map((cfg, idx) => {
-            const Icon = cfg.icon;
-            return (
-              <div key={idx} className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={`p-2 rounded-lg ${cfg.color}`}>
-                    <Icon size={16} />
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-500 block">TABLE: {cfg.type}</span>
-                    <span className="font-bold text-slate-200">{cfg.label}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm font-black text-white">{cfg.count}</span>
-                  <span className="text-[9px] text-slate-400 block font-sans">Synced</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
       </div>
 
     </div>

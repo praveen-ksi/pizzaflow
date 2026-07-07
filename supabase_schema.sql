@@ -103,6 +103,8 @@ CREATE TABLE order_items (
   order_id UUID NOT NULL,
   pizza_id VARCHAR(100) NOT NULL, -- Aligns with frontend pizza catalog slugs
   pizza_name VARCHAR(150) NOT NULL, -- Snapshotted name for historic logging
+  base_name VARCHAR(100) NOT NULL DEFAULT 'Thin Crust',
+  toppings TEXT[] NOT NULL DEFAULT '{}',
   quantity INTEGER NOT NULL,
   unit_price NUMERIC(10, 2) NOT NULL, -- Snapshotted pricing for billing integrity
   total_price NUMERIC(10, 2) NOT NULL, -- Cached total (quantity * unit_price)
@@ -121,6 +123,12 @@ CREATE TABLE order_items (
   CONSTRAINT chk_total_price_non_negative CHECK (total_price >= 0.00),
   CONSTRAINT chk_calculated_total_price CHECK (total_price = (quantity * unit_price))
 );
+
+
+-- MIGRATION STATEMENTS FOR PRE-EXISTING TABLES:
+-- If you are updating an existing database, run these lines to append the columns:
+-- ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS base_name VARCHAR(100) NOT NULL DEFAULT 'Thin Crust';
+-- ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS toppings TEXT[] NOT NULL DEFAULT '{}';
 
 
 -- --- TABLE: payments ---

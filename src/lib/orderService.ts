@@ -56,6 +56,9 @@ export interface OrderInput {
   payment_method: 'UPI' | 'Card' | 'Cash';
   items: OrderItemInput[];
   total: number;
+  subtotal?: number;
+  tax?: number;
+  discount?: number;
 }
 
 export interface UnifiedOrder {
@@ -76,6 +79,9 @@ export interface UnifiedOrder {
   created_at: string;
   payment_txn: string;
   payment_status: string;
+  subtotal?: number;
+  tax?: number;
+  discount?: number;
 }
 
 // Map Database Status Enum to UI Status Strings
@@ -141,19 +147,28 @@ export const orderService = {
         // Generate a fallback token number in case the trigger does not exist on the table
         const clientToken = generateSimulatedDailyToken();
 
-        // 1. Insert row into public.orders table
+        // Calculate precise financial components
+        const totalPizzas = input.items.reduce((sum, item) => sum + item.quantity, 0);
+        const subtotalVal = input.subtotal !== undefined ? input.subtotal : input.items.reduce((sum, item) => sum + item.single_price * item.quantity, 0);
+        const discountVal = input.discount !== undefined ? input.discount : (totalPizzas >= 5 ? Math.round(subtotalVal * 0.1) : 0);
+        const taxVal = input.tax !== undefined ? input.tax : Math.round((subtotalVal - discountVal) * 0.18);
+        const totalVal = input.total !== undefined ? input.total : (subtotalVal - discountVal + taxVal);
+
+        // 1. Insert row into public.orders table with separate financial components
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .insert({
             customer_name: input.customer_name,
             customer_phone: input.customer_phone,
             token_number: clientToken, // Pre-populate so insert won't fail if DB trigger is missing or fails
-            total_amount: Math.round(input.total * 100) / 100,
-            subtotal_amount: Math.round(input.total * 100) / 100, // Simple fallback mapping
+            total_amount: Math.round(totalVal * 100) / 100,
+            subtotal_amount: Math.round(subtotalVal * 100) / 100,
+            tax_amount: Math.round(taxVal * 100) / 100,
+            discount_amount: Math.round(discountVal * 100) / 100,
             order_status: 'CONFIRMED',
             fulfillment_type: 'DINE_IN'
           })
-          .select('id, token_number, created_at')
+          .select('id, token_number, created_at, subtotal_amount, tax_amount, discount_amount, total_amount')
           .single();
 
         if (orderError) throw orderError;
@@ -167,7 +182,9 @@ export const orderService = {
           return {
             order_id: orderId,
             pizza_id: item.pizza_id,
-            pizza_name: `${item.pizza_name} (${item.base_name})`, // Include base in snapshots
+            pizza_name: item.pizza_name,
+            base_name: item.base_name,
+            toppings: item.toppings,
             quantity: item.quantity,
             unit_price: unitPriceRounded,
             total_price: totalPriceRounded
@@ -189,7 +206,7 @@ export const orderService = {
             payment_method: input.payment_method.toUpperCase(),
             payment_status: payStatus,
             transaction_reference: defaultTxn,
-            amount: Math.round(input.total * 100) / 100
+            amount: Math.round(totalVal * 100) / 100
           });
 
         if (payError) throw payError;
@@ -208,7 +225,10 @@ export const orderService = {
             quantity: item.quantity,
             single_price: item.single_price
           })),
-          total: input.total,
+          total: Number(orderData.total_amount) || totalVal,
+          subtotal: Number(orderData.subtotal_amount) || subtotalVal,
+          tax: Number(orderData.tax_amount) || taxVal,
+          discount: Number(orderData.discount_amount) || discountVal,
           status: 'Preparing',
           created_at: orderData.created_at || new Date().toISOString(),
           payment_txn: defaultTxn,
@@ -231,6 +251,12 @@ export const orderService = {
 
     // Local Storage Simulation fallback (for sandbox mode)
     const simulatedToken = generateSimulatedDailyToken();
+    const totalPizzas = input.items.reduce((sum, item) => sum + item.quantity, 0);
+    const subtotalVal = input.subtotal !== undefined ? input.subtotal : input.items.reduce((sum, item) => sum + item.single_price * item.quantity, 0);
+    const discountVal = input.discount !== undefined ? input.discount : (totalPizzas >= 5 ? Math.round(subtotalVal * 0.1) : 0);
+    const taxVal = input.tax !== undefined ? input.tax : Math.round((subtotalVal - discountVal) * 0.18);
+    const totalVal = input.total !== undefined ? input.total : (subtotalVal - discountVal + taxVal);
+
     const newOrder: UnifiedOrder = {
       id: `ORD-${Date.now()}`,
       token_number: simulatedToken,
@@ -238,7 +264,10 @@ export const orderService = {
       customer_phone: input.customer_phone.trim(),
       payment_method: input.payment_method,
       items: input.items,
-      total: input.total,
+      total: totalVal,
+      subtotal: subtotalVal,
+      tax: taxVal,
+      discount: discountVal,
       status: 'Preparing',
       created_at: new Date().toISOString(),
       payment_txn: defaultTxn,
@@ -270,10 +299,15 @@ export const orderService = {
             customer_name,
             customer_phone,
             total_amount,
+            subtotal_amount,
+            tax_amount,
+            discount_amount,
             order_status,
             created_at,
             order_items (
               pizza_name,
+              base_name,
+              toppings,
               quantity,
               unit_price
             ),
@@ -300,16 +334,31 @@ export const orderService = {
               payment_method: (pay?.payment_method || 'UPI') as any,
               items: items.map((i: any) => {
                 // Try parsing base name from name snapshot if formatted as "Name (Base)"
-                const nameParts = i.pizza_name.match(/^(.*?)\s*\((.*?)\)$/);
+                let pizzaName = i.pizza_name;
+                let baseName = i.base_name;
+                
+                if (!baseName) {
+                  const nameParts = i.pizza_name.match(/^(.*?)\s*\((.*?)\)$/);
+                  if (nameParts) {
+                    pizzaName = nameParts[1];
+                    baseName = nameParts[2];
+                  } else {
+                    baseName = 'Thin Crust';
+                  }
+                }
+
                 return {
-                  pizza_name: nameParts ? nameParts[1] : i.pizza_name,
-                  base_name: nameParts ? nameParts[2] : 'Thin Crust',
-                  toppings: [], // Toppings are snapshotted inside the name or kept simple
+                  pizza_name: pizzaName,
+                  base_name: baseName,
+                  toppings: Array.isArray(i.toppings) ? i.toppings : [],
                   quantity: i.quantity,
                   single_price: Number(i.unit_price)
                 };
               }),
               total: Number(ord.total_amount),
+              subtotal: ord.subtotal_amount ? Number(ord.subtotal_amount) : undefined,
+              tax: ord.tax_amount ? Number(ord.tax_amount) : undefined,
+              discount: ord.discount_amount ? Number(ord.discount_amount) : undefined,
               status: mapDbStatusToUi(ord.order_status),
               created_at: ord.created_at,
               payment_txn: pay?.transaction_reference || 'CASH-OFFLINE',

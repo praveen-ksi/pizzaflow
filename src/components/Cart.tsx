@@ -58,6 +58,11 @@ export const Cart: React.FC<CartProps> = ({
   const [dbError, setDbError] = useState<string | null>(null);
   const [orderedItems, setOrderedItems] = useState<CartItemType[]>([]);
   const [orderedGrandTotal, setOrderedGrandTotal] = useState(0);
+  const [orderedDiscount, setOrderedDiscount] = useState(0);
+
+  // Discount / Promo Code states
+  // Managed automatically based on pizza count (5 or more)
+  const isPromoApplied = items.reduce((sum, item) => sum + item.quantity, 0) >= 5;
 
   // Payment Gateway simulation states
   const [paymentPartner] = useState<'PizzaPay'>('PizzaPay');
@@ -114,6 +119,8 @@ export const Cart: React.FC<CartProps> = ({
     return true;
   };
 
+  const totalPizzaCount = items.reduce((sum, item) => sum + item.quantity, 0);
+
   // Math totals
   const subtotal = items.reduce((sum, item) => {
     const singlePizzaPrice =
@@ -123,9 +130,12 @@ export const Cart: React.FC<CartProps> = ({
     return sum + singlePizzaPrice * item.quantity;
   }, 0);
 
-  const gstTax = Math.round(subtotal * 0.05); // 5% GST on food
-  const deliveryFee = subtotal > 0 ? (subtotal > 999 ? 0 : 40) : 0;
-  const grandTotal = subtotal + gstTax + deliveryFee;
+  // Calculate discount (10% off subtotal if 10% OFF applied)
+  const discountAmount = isPromoApplied ? Math.round(subtotal * 0.1) : 0;
+  const subtotalWithDiscount = subtotal - discountAmount;
+
+  const gstTax = Math.round(subtotalWithDiscount * 0.18); // 18% GST on food post-discount
+  const grandTotal = subtotalWithDiscount + gstTax;
 
   // Real-time QR Code expiration countdown
   useEffect(() => {
@@ -146,13 +156,65 @@ export const Cart: React.FC<CartProps> = ({
     if (!fullName.trim()) {
       errors.fullName = 'Full Name is required';
     }
-    if (!phoneNumber.trim()) {
+    
+    const phoneTrimmed = phoneNumber.trim();
+    if (!phoneTrimmed) {
       errors.phoneNumber = 'Phone Number is required';
-    } else if (!/^\+?[\d\s-]{8,15}$/.test(phoneNumber.trim())) {
-      errors.phoneNumber = 'Please enter a valid phone number';
+    } else {
+      // Strip everything except digits
+      const digitsOnly = phoneTrimmed.replace(/\D/g, '');
+      let main10Digits = digitsOnly;
+      let isValidIndianPhone = false;
+
+      if (digitsOnly.length === 10) {
+        main10Digits = digitsOnly;
+        isValidIndianPhone = true;
+      } else if (digitsOnly.length === 11 && digitsOnly.startsWith('0')) {
+        main10Digits = digitsOnly.substring(1);
+        isValidIndianPhone = true;
+      } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+        main10Digits = digitsOnly.substring(2);
+        isValidIndianPhone = true;
+      } else if (digitsOnly.length > 10) {
+        // Fallback for +91 prefixes or duplicate codes
+        const possibleMain = digitsOnly.slice(-10);
+        const prefix = digitsOnly.slice(0, -10);
+        if (prefix === '91' || prefix === '0' || prefix === '091' || prefix === '9191') {
+          main10Digits = possibleMain;
+          isValidIndianPhone = true;
+        }
+      }
+
+      const firstDigit = main10Digits[0];
+      const startsWithValidMobileRange = ['6', '7', '8', '9'].includes(firstDigit);
+
+      if (!isValidIndianPhone || main10Digits.length !== 10) {
+        errors.phoneNumber = 'Enter a valid 10-digit Indian number (starts with 6, 7, 8, or 9)';
+      } else if (!startsWithValidMobileRange) {
+        errors.phoneNumber = 'Indian mobile numbers must start with 6, 7, 8, or 9';
+      } else {
+        // Format to a clean, standardized format: +91 XXXXX XXXXX
+        const formattedPhone = `+91 ${main10Digits.substring(0, 5)} ${main10Digits.substring(5)}`;
+        setPhoneNumber(formattedPhone);
+      }
     }
+
     setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    
+    const hasErrors = Object.keys(errors).length > 0;
+    if (hasErrors) {
+      setTimeout(() => {
+        const firstErrorKey = Object.keys(errors)[0];
+        const elementId = firstErrorKey === 'fullName' ? 'input-checkout-name' : 'input-checkout-phone';
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.focus({ preventScroll: true });
+        }
+      }, 100);
+    }
+
+    return !hasErrors;
   };
 
   const handlePlaceOrder = async () => {
@@ -206,6 +268,9 @@ export const Cart: React.FC<CartProps> = ({
         customer_phone: phoneNumber.trim(),
         payment_method: paymentMethod,
         items: orderItemsInput,
+        subtotal: subtotal,
+        discount: discountAmount,
+        tax: gstTax,
         total: grandTotal
       }, txnId, paymentStatusText);
 
@@ -213,6 +278,7 @@ export const Cart: React.FC<CartProps> = ({
       // Cache ordered items and total for the receipt visualization before clearing
       setOrderedItems([...items]);
       setOrderedGrandTotal(grandTotal);
+      setOrderedDiscount(discountAmount);
       // Clear parent cart state and localStorage immediately upon success
       onClear();
       setIsCheckoutSuccess(true);
@@ -232,6 +298,8 @@ export const Cart: React.FC<CartProps> = ({
     setPhoneNumber(localStorage.getItem('pizza_customer_phone') || '');
     setPaymentMethod('UPI');
     setFormErrors({});
+    // Reset discount/promo states
+    setOrderedDiscount(0);
   };
 
   if (isCheckoutSuccess) {
@@ -290,6 +358,12 @@ export const Cart: React.FC<CartProps> = ({
               </div>
             ))}
           </div>
+          {orderedDiscount > 0 && (
+            <div className="text-xs text-emerald-600 flex justify-between border-b border-dashed border-slate-200 pb-2 mt-2">
+              <span>Promo Discount (10% OFF)</span>
+              <span className="font-mono">-₹{orderedDiscount}</span>
+            </div>
+          )}
           <div className="flex justify-between text-xs font-bold text-slate-800">
             <span>Grand Total (incl. GST)</span>
             <span className="font-mono text-emerald-700">₹{orderedGrandTotal}</span>
@@ -370,7 +444,7 @@ export const Cart: React.FC<CartProps> = ({
           <div className="bg-white border border-slate-200 rounded-[28px] p-6 sm:p-8 space-y-6 shadow-sm">
             <div>
               <h3 className="text-xl font-extrabold font-display text-slate-900 tracking-tight">
-                Delivery & Checkout Details
+                Dine-In Checkout Details
               </h3>
               <p className="text-slate-500 text-xs mt-1 leading-relaxed">
                 Please provide your contact information and payment method to send this build to the oven.
@@ -417,19 +491,24 @@ export const Cart: React.FC<CartProps> = ({
 
               {/* Phone Number */}
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">Phone Number</label>
+                <div className="flex justify-between items-center">
+                  <label className="block text-xs font-bold text-slate-700">Phone Number</label>
+                  <span className="text-[10px] text-slate-400 font-medium">🇮🇳 Indian mobile numbers only</span>
+                </div>
                 <input
                   id="input-checkout-phone"
                   type="tel"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="e.g. +91 9876543210"
+                  placeholder="e.g. 98765 43210 or +91 98765 43210"
                   className={`block w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white transition-all duration-200 ${
                     formErrors.phoneNumber ? 'border-rose-400 focus:border-rose-500 ring-2 ring-rose-500/10' : 'border-slate-200 focus:border-tomato focus:ring-2 focus:ring-tomato/10'
                   }`}
                 />
-                {formErrors.phoneNumber && (
+                {formErrors.phoneNumber ? (
                   <p className="text-[10px] text-rose-500 font-medium">{formErrors.phoneNumber}</p>
+                ) : (
+                  <p className="text-[10px] text-slate-400">Accepts standard 10 digits, +91, 91, or 0 prefixes.</p>
                 )}
               </div>
 
@@ -512,26 +591,49 @@ export const Cart: React.FC<CartProps> = ({
             <span>Subtotal</span>
             <span className="font-mono text-slate-950 font-medium">₹{subtotal}</span>
           </div>
+          {isPromoApplied && (
+            <div className="flex justify-between text-emerald-600 font-medium">
+              <span>Discount (10% OFF)</span>
+              <span className="font-mono">-₹{discountAmount}</span>
+            </div>
+          )}
           <div className="flex justify-between text-slate-500">
-            <span>GST Tax (5%)</span>
+            <span>GST Tax (18%)</span>
             <span className="font-mono text-slate-950 font-medium">₹{gstTax}</span>
           </div>
-          <div className="flex justify-between text-slate-500">
-            <span>Delivery Fee</span>
-            {deliveryFee === 0 ? (
-              <span className="text-emerald-600 font-bold font-mono text-xs uppercase bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
-                Free
-              </span>
+        </div>
+
+        {/* Promo Code Info section */}
+        {items.length > 0 && (
+          <div className="space-y-2.5 border-b border-slate-100 pb-5">
+            <div className="text-xs font-bold text-slate-700">Bulk Order Discount</div>
+            {isPromoApplied ? (
+              <div className="p-3 bg-emerald-50/85 border border-emerald-500/25 rounded-2xl space-y-1">
+                <div className="flex items-center gap-1.5 text-emerald-800 font-bold text-xs">
+                  <Check size={14} className="text-emerald-600 stroke-[3]" />
+                  <span>10% OFF Auto-Applied!</span>
+                </div>
+                <p className="text-[10px] text-emerald-700 leading-normal font-sans">
+                  Awesome! Since you have ordered <strong>{totalPizzaCount} pizzas</strong> (5 or more), a bulk discount of 10% has been automatically deducted from your subtotal.
+                </p>
+              </div>
             ) : (
-              <span className="font-mono text-slate-950 font-medium">₹{deliveryFee}</span>
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-1">
+                <div className="flex items-center gap-1.5 text-slate-700 font-bold text-xs">
+                  <AlertCircle size={14} className="text-slate-400" />
+                  <span>Bulk Discount Reward</span>
+                </div>
+                <p className="text-[10px] text-slate-500 leading-normal font-sans">
+                  Order <strong>5 or more pizzas</strong> to unlock <strong>10% OFF</strong> your entire cart automatically!
+                </p>
+                <div className="pt-1 flex items-center justify-between text-[10px] font-mono text-slate-400">
+                  <span>Current: {totalPizzaCount} {totalPizzaCount === 1 ? 'pizza' : 'pizzas'}</span>
+                  <span className="text-tomato font-bold">Need {5 - totalPizzaCount} more</span>
+                </div>
+              </div>
             )}
           </div>
-          {deliveryFee > 0 && (
-            <p className="text-[10px] text-amber-600 font-sans leading-relaxed">
-              💡 Tip: Add pizzas worth ₹{1000 - subtotal} more to unlock <strong>Free Delivery</strong>!
-            </p>
-          )}
-        </div>
+        )}
 
         <div className="flex justify-between items-baseline">
           <span className="font-bold text-slate-950 text-sm font-sans">Total Price</span>

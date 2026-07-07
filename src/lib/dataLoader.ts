@@ -456,6 +456,37 @@ export async function uploadTableData(
       .map(line => line.trim())
       .filter(line => line.length > 0 && !line.startsWith('#'));
 
+    // Validate all lines first
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const parts = line.split(';');
+      if (parts.length < 3) {
+        throw new Error(`Validation Error on Line ${i + 1}: Line must have at least 3 parts (ID;Name;Price) separated by semicolons.`);
+      }
+
+      const id = parts[0]?.trim();
+      const name = parts[1]?.trim();
+      const priceStr = parts[2]?.trim();
+
+      if (!id) {
+        throw new Error(`Validation Error on Line ${i + 1}: Item number/ID is required.`);
+      }
+
+      // 1. Entering a price number instead of an item number
+      if (/^\d+$/.test(id)) {
+        throw new Error(`Validation Error on Line ${i + 1}: Entered a price number "${id}" instead of a valid item number (e.g. P1, B1, T1).`);
+      }
+
+      // 2. Missing price field
+      if (priceStr === undefined || priceStr === '') {
+        throw new Error(`Validation Error on Line ${i + 1}: Price field is missing for item "${name || id}".`);
+      }
+
+      if (isNaN(Number(priceStr))) {
+        throw new Error(`Validation Error on Line ${i + 1}: Invalid price "${priceStr}" for item "${name || id}".`);
+      }
+    }
+
     if (tableType === 'pizzas') {
       const parsedPizzas: Pizza[] = lines.map(line => {
         const [id, name, priceStr, desc, img] = line.split(';');

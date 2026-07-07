@@ -5,8 +5,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChefHat, Pizza, ArrowRight, ShieldCheck, Code, Sparkles } from 'lucide-react';
-import { SetupAssistant } from '../components/SetupAssistant';
+import { ChefHat, Pizza, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export const Home: React.FC = () => {
@@ -27,8 +26,8 @@ export const Home: React.FC = () => {
           </span>
         </div>
         <div className="flex items-center gap-2 font-mono text-xs text-slate-600 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-xs">
-          <Code size={13} className="text-tomato" />
-          <span>PHASE 1: SECURE AUTH</span>
+          <Pizza size={13} className="text-tomato" />
+          <span>DINE-IN & TAKEAWAY AVAILABLE</span>
         </div>
       </header>
 
@@ -42,16 +41,16 @@ export const Home: React.FC = () => {
         >
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold font-mono bg-tomato/5 text-tomato border border-tomato/10">
             <Sparkles size={12} className="animate-pulse" />
-            SUPABASE FULL-STACK ARCHITECTURE
+            GOURMET HAND-CRAFTED SLICES
           </span>
           <h1 className="text-4xl sm:text-6xl font-extrabold font-display tracking-tight text-slate-900 max-w-4xl mx-auto leading-[1.1]">
-            Oven-Fresh Security For Your{' '}
+            Oven-Fresh Perfection For Every{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-tomato to-amber-600">
-              Pizza Enterprise
+              Pizza Lover
             </span>
           </h1>
           <p className="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed font-sans">
-            Streamline your slice. PizzaFlow provides robust role-based portal protection for admins and kitchen dispatchers. Connect your real database or explore the sandbox workspace instantly.
+            Savor our gourmet pizzas crafted with premium mozzarella, slow-risen sourdough, and freshly harvested organic toppings. Browse the menu, order seamlessly for dine-in, and track your pizza as it bakes!
           </p>
         </motion.div>
       </section>
@@ -153,11 +152,6 @@ export const Home: React.FC = () => {
         </Link>
 
       </section>
-
-      {/* Database Setup Assistance directly on Home */}
-      <div className="pb-16">
-        <SetupAssistant />
-      </div>
 
       {/* Footer */}
       <footer className="text-center py-10 border-t border-slate-200 text-slate-400 text-xs font-mono">

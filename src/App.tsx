@@ -22,7 +22,7 @@ export default function App() {
           {/* Guest Home Portal */}
           <Route path="/" element={<Home />} />
           
-          {/* Customer Storefront (Phase 2) */}
+          {/* Customer Storefront */}
           <Route path="/customer" element={<CustomerPortal />} />
 
           {/* Authentication Portals */}

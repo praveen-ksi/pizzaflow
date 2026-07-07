@@ -23,7 +23,6 @@ import {
   Truck,
   Pizza as PizzaIcon
 } from 'lucide-react';
-import { SetupAssistant } from '../components/SetupAssistant';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const StaffDashboard: React.FC = () => {
@@ -234,14 +233,12 @@ export const StaffDashboard: React.FC = () => {
             <div className="flex flex-wrap gap-2 font-mono text-xs text-white">
               <div className="bg-black/15 px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                <span className="opacity-75">STATUS: </span>
-                <span className="font-bold">ACTIVE SCAN</span>
+                <span className="opacity-75">KITCHEN: </span>
+                <span className="font-bold">OPEN</span>
               </div>
               <div className="bg-black/15 px-3 py-1.5 rounded-lg border border-white/10">
-                <span className="opacity-75">PORT: </span>
-                <span className="font-bold">
-                  {isDemoMode ? 'SANDBOX' : 'LIVE DB'}
-                </span>
+                <span className="opacity-75">STATION: </span>
+                <span className="font-bold">MAIN OVEN</span>
               </div>
             </div>
           </div>
@@ -397,7 +394,7 @@ export const StaffDashboard: React.FC = () => {
             {loading ? (
               <div className="py-20 text-center space-y-3">
                 <RefreshCw size={24} className="text-tomato animate-spin mx-auto" />
-                <p className="text-xs text-slate-400">Loading live baking database state...</p>
+                <p className="text-xs text-slate-400">Loading live kitchen order queue...</p>
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="py-16 text-center border border-dashed border-slate-200 rounded-2xl bg-slate-50/40 space-y-3">
@@ -607,25 +604,22 @@ export const StaffDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Phase Scope operational guard banner */}
+        {/* Kitchen guidelines banner */}
         <div className="bg-cream border border-tomato/10 rounded-3xl p-6 shadow-2xs">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-white text-tomato rounded-2xl border border-tomato/10 shadow-2xs shrink-0">
-              <Layers size={22} />
+              <Flame size={22} />
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900 font-display">
-                Staff Authentication & Guard Verification Active
+                Kitchen Operational Safety Guidelines
               </h2>
               <p className="text-slate-600 text-sm mt-1.5 leading-relaxed">
-                You are currently logged in with a restricted Kitchen Staff profile. This dashboard is secured under direct role-based policies. Attempting to manual-bypass or navigate to <code>/admin/dashboard</code> without Admin clearance will trigger our system guards and prevent database breaches.
+                Welcome to the Kitchen Staff Dashboard! Please ensure all ingredients are kept fresh, workstation surfaces are sanitized regularly, and bake timers are monitored closely. Pizzas must always be served piping hot for maximum satisfaction.
               </p>
             </div>
           </div>
         </div>
-
-        {/* Setup Assistant Section */}
-        <SetupAssistant />
 
       </main>
     </div>

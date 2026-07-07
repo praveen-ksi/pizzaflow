@@ -40,6 +40,11 @@ export const CustomerPortal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'menu' | 'cart'>('menu');
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
+  // Tracking Modal and Indian Phone Validation states
+  const [isTrackModalOpen, setIsTrackModalOpen] = useState(false);
+  const [trackingPhoneInput, setTrackingPhoneInput] = useState('');
+  const [trackingPhoneError, setTrackingPhoneError] = useState('');
+
   // Order tracking and 30-second status polling states
   const [trackedPhone, setTrackedPhone] = useState(() => localStorage.getItem('pizza_customer_phone') || '');
   const [phoneInput, setPhoneInput] = useState('');
@@ -47,6 +52,87 @@ export const CustomerPortal: React.FC = () => {
   const [isTrackingLoading, setIsTrackingLoading] = useState(false);
   const [trackingError, setTrackingError] = useState('');
   const [countdown, setCountdown] = useState(30);
+
+  // Search orders for a phone number using Indian phone validation
+  const handleSearchOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTrackingPhoneError('');
+
+    const triggerError = (msg: string) => {
+      setTrackingPhoneError(msg);
+      setTimeout(() => {
+        const element = document.getElementById('input-tracking-phone');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.focus({ preventScroll: true });
+        }
+      }, 100);
+    };
+    
+    const phoneTrimmed = trackingPhoneInput.trim();
+    if (!phoneTrimmed) {
+      triggerError('Phone Number is required');
+      return;
+    }
+
+    const digitsOnly = phoneTrimmed.replace(/\D/g, '');
+    let main10Digits = digitsOnly;
+    let isValidIndianPhone = false;
+
+    if (digitsOnly.length === 10) {
+      main10Digits = digitsOnly;
+      isValidIndianPhone = true;
+    } else if (digitsOnly.length === 11 && digitsOnly.startsWith('0')) {
+      main10Digits = digitsOnly.substring(1);
+      isValidIndianPhone = true;
+    } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+      main10Digits = digitsOnly.substring(2);
+      isValidIndianPhone = true;
+    } else if (digitsOnly.length > 10) {
+      const possibleMain = digitsOnly.slice(-10);
+      const prefix = digitsOnly.slice(0, -10);
+      if (prefix === '91' || prefix === '0' || prefix === '091' || prefix === '9191') {
+        main10Digits = possibleMain;
+        isValidIndianPhone = true;
+      }
+    }
+
+    const firstDigit = main10Digits[0];
+    const startsWithValidMobileRange = ['6', '7', '8', '9'].includes(firstDigit);
+
+    if (!isValidIndianPhone || main10Digits.length !== 10) {
+      triggerError('Enter a valid 10-digit Indian number (starts with 6, 7, 8, or 9)');
+      return;
+    }
+    
+    if (!startsWithValidMobileRange) {
+      triggerError('Indian mobile numbers must start with 6, 7, 8, or 9');
+      return;
+    }
+
+    const formattedPhone = `+91 ${main10Digits.substring(0, 5)} ${main10Digits.substring(5)}`;
+    
+    setIsTrackingLoading(true);
+    try {
+      const orders = await orderService.fetchCustomerOrders(formattedPhone);
+      setTrackedOrders(orders);
+      
+      if (orders.length > 0) {
+        setTrackedPhone(formattedPhone);
+        localStorage.setItem('pizza_customer_phone', formattedPhone);
+        setIsTrackModalOpen(false);
+        setIsStatusOpen(true);
+        setTrackingPhoneInput('');
+      } else {
+        triggerError('No orders found for this Indian mobile number.');
+      }
+    } catch (err) {
+      console.error(err);
+      triggerError('Error connecting to the kitchen queue. Please try again.');
+    } finally {
+      setIsTrackingLoading(false);
+    }
+  };
 
   // Fetch orders for customer
   const fetchCustomerOrders = async (phone: string) => {
@@ -226,29 +312,39 @@ export const CustomerPortal: React.FC = () => {
             </div>
           </div>
 
-          {/* Order Status Button on Top Right of Menu Bar */}
-          {(() => {
-            const activeStatuses = ['Preparing', 'Baking', 'Dispatched'];
-            const activeOrder = trackedOrders.find(ord => activeStatuses.includes(ord.status));
-            if (!activeOrder) return null;
+          {/* Order Tracking & Status Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsTrackModalOpen(true)}
+              className="px-3.5 py-2 rounded-full font-bold text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200/50 transition duration-300 flex items-center gap-1.5"
+            >
+              <Search size={13} />
+              <span>Track Order</span>
+            </button>
 
-            return (
-              <button
-                onClick={() => setIsStatusOpen(true)}
-                className={`px-4 py-2 rounded-full font-bold text-xs transition duration-300 flex items-center gap-1.5 border-2 shadow-xs hover:scale-105 active:scale-95 ${
-                  activeOrder.status === 'Dispatched'
-                    ? 'border-emerald-500 text-emerald-700 bg-emerald-50/85 hover:bg-emerald-100 hover:border-emerald-600'
-                    : 'border-amber-400 text-amber-700 bg-amber-50/85 hover:bg-amber-100 hover:border-amber-500'
-                }`}
-              >
-                <Clock size={14} className={activeOrder.status === 'Baking' ? "animate-spin text-tomato" : "animate-pulse text-amber-500"} />
-                <span>Order Status</span>
-                <span className="font-mono bg-white px-1.5 py-0.5 rounded-md text-[10px] border border-inherit text-slate-800">
-                  #{activeOrder.token_number}
-                </span>
-              </button>
-            );
-          })()}
+            {(() => {
+              const activeStatuses = ['Preparing', 'Baking', 'Dispatched'];
+              const activeOrder = trackedOrders.find(ord => activeStatuses.includes(ord.status));
+              if (!activeOrder) return null;
+
+              return (
+                <button
+                  onClick={() => setIsStatusOpen(true)}
+                  className={`px-3.5 py-2 rounded-full font-bold text-xs transition duration-300 flex items-center gap-1.5 border shadow-xs hover:scale-105 active:scale-95 ${
+                    activeOrder.status === 'Dispatched'
+                      ? 'border-emerald-500 text-emerald-700 bg-emerald-50/85 hover:bg-emerald-100 hover:border-emerald-600'
+                      : 'border-amber-400 text-amber-700 bg-amber-50/85 hover:bg-amber-100 hover:border-amber-500'
+                  }`}
+                >
+                  <Clock size={13} className={activeOrder.status === 'Baking' ? "animate-spin text-tomato" : "animate-pulse text-amber-500"} />
+                  <span>Order Status</span>
+                  <span className="font-mono bg-white px-1.5 py-0.5 rounded-md text-[9px] border border-inherit text-slate-800">
+                    #{activeOrder.token_number}
+                  </span>
+                </button>
+              );
+            })()}
+          </div>
         </div>
       </header>
 
@@ -257,11 +353,11 @@ export const CustomerPortal: React.FC = () => {
         <div className="max-w-7xl mx-auto space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-mono tracking-widest bg-tomato/10 text-tomato font-extrabold px-3 py-1 rounded-full border border-tomato/20">
-              PHASE 2 DEPLOYED
+              ONLINE ORDERING
             </span>
-            <span className="text-[10px] font-mono tracking-widest bg-slate-100 text-slate-500 font-bold px-3 py-1 rounded-full border border-slate-200 flex items-center gap-1">
+            <span className="text-[10px] font-mono tracking-widest bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-full border border-slate-200 flex items-center gap-1">
               <Info size={12} />
-              Options loaded dynamically from source .txt files
+              100% FRESH DAILY INGREDIENTS
             </span>
           </div>
           <div>
@@ -530,6 +626,90 @@ export const CustomerPortal: React.FC = () => {
             </div>
           );
         })()}
+
+        {/* Track Order Modal */}
+        {isTrackModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsTrackModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs"
+            />
+            
+            {/* Modal Box */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-[32px] p-6 sm:p-8 shadow-2xl border border-slate-100 overflow-hidden space-y-6 z-10"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-tomato/10 text-tomato flex items-center justify-center">
+                    <Search size={16} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 font-display">
+                      Track Your Pizza Order
+                    </h3>
+                    <p className="text-[10px] text-slate-400 font-mono">
+                      Enter your Indian mobile number
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsTrackModalOpen(false)}
+                  className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-xl transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSearchOrder} className="space-y-4">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="block text-xs font-bold text-slate-700">Phone Number</label>
+                    <span className="text-[10px] text-slate-400 font-medium">🇮🇳 Indian mobile numbers</span>
+                  </div>
+                  <input
+                    id="input-tracking-phone"
+                    type="tel"
+                    value={trackingPhoneInput}
+                    onChange={(e) => setTrackingPhoneInput(e.target.value)}
+                    placeholder="e.g. 98765 43210 or +91 98765 43210"
+                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-tomato focus:ring-2 focus:ring-tomato/10 transition-all duration-200"
+                  />
+                  {trackingPhoneError ? (
+                    <p className="text-[10px] text-rose-500 font-medium">{trackingPhoneError}</p>
+                  ) : (
+                    <p className="text-[10px] text-slate-400">Accepts standard 10 digits, +91, 91, or 0 prefixes.</p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isTrackingLoading}
+                  className="w-full py-3 bg-tomato hover:bg-tomato-hover text-white rounded-xl text-xs font-bold transition-all duration-300 shadow-md shadow-tomato/10 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {isTrackingLoading ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>Checking Oven Queue...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Search size={14} />
+                      <span>Search Live Orders</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
     </div>
   );

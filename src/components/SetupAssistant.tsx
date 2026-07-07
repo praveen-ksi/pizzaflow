@@ -119,7 +119,6 @@ CREATE TABLE public.orders (
   subtotal_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   tax_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   discount_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-  delivery_charge NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   total_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
   order_status public.order_status_enum NOT NULL DEFAULT 'CONFIRMED',
   fulfillment_type public.fulfillment_type_enum NOT NULL DEFAULT 'TAKEAWAY',
@@ -136,6 +135,8 @@ CREATE TABLE public.order_items (
   order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
   pizza_id VARCHAR(100) NOT NULL,
   pizza_name VARCHAR(150) NOT NULL,
+  base_name VARCHAR(100) NOT NULL DEFAULT 'Thin Crust',
+  toppings TEXT[] NOT NULL DEFAULT '{}',
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   unit_price NUMERIC(10, 2) NOT NULL CHECK (unit_price >= 0.00),
   total_price NUMERIC(10, 2) NOT NULL CHECK (total_price >= 0.00),
@@ -331,7 +332,11 @@ INSERT INTO public.pizza_toppings (id, name, price) VALUES
 ('T10', 'Peri-Peri Drizzle', 59)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
-  price = EXCLUDED.price;`;
+  price = EXCLUDED.price;
+
+-- 9. Migration script for pre-existing tables:
+-- ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS base_name VARCHAR(100) NOT NULL DEFAULT 'Thin Crust';
+-- ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS toppings TEXT[] NOT NULL DEFAULT '{}';`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(sqlCode);
