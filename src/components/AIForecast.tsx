@@ -115,7 +115,8 @@ export const AIForecast: React.FC<AIForecastProps> = ({ pizzas, bases, toppings 
     setError(null);
     setForecast(null);
     try {
-      const response = await fetch('/api/forecast', {
+      const apiBaseUrl = (import.meta as any).env?.VITE_API_URL || '';
+      const response = await fetch(`${apiBaseUrl}/api/forecast`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

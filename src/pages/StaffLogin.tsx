@@ -6,22 +6,26 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ChefHat, Mail, Lock, AlertCircle, Eye, EyeOff, LogIn, ArrowRight } from 'lucide-react';
+import { ChefHat, Mail, Lock, AlertCircle, Eye, EyeOff, LogIn, ArrowRight, User, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export const StaffLogin: React.FC = () => {
-  const { signIn, error, loading, clearError } = useAuth();
+  const { signIn, signUp, error, loading, clearError } = useAuth();
   const navigate = useNavigate();
 
   // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    setSuccessMessage(null);
     clearError();
 
     if (!email || !password) {
@@ -30,11 +34,30 @@ export const StaffLogin: React.FC = () => {
     }
 
     try {
-      await signIn(email, password, 'staff');
-      navigate('/staff/dashboard');
+      if (isRegisterMode) {
+        if (!fullName) {
+          setFormError('Please enter your full name.');
+          return;
+        }
+        await signUp(email, password, fullName, 'staff');
+        setSuccessMessage('Registration successful! You can now log in.');
+        setIsRegisterMode(false);
+      } else {
+        await signIn(email, password, 'staff');
+        navigate('/staff/dashboard');
+      }
     } catch (err: any) {
-      // Error is caught and set by AuthContext
+      console.error('Authentication Error details:', err);
+      // Try to extract additional properties if present in Supabase response
+      if (err.status) console.error('Error status code:', err.status);
     }
+  };
+
+  const toggleMode = () => {
+    setIsRegisterMode(!isRegisterMode);
+    setFormError(null);
+    setSuccessMessage(null);
+    clearError();
   };
 
   return (
@@ -95,8 +118,12 @@ export const StaffLogin: React.FC = () => {
                 <ChefHat size={14} />
                 Kitchen Operations Gate
               </div>
-              <h2 className="text-2xl font-bold font-display text-slate-900 tracking-tight">Welcome Back</h2>
-              <p className="text-slate-500 text-sm mt-1">Sign in to your kitchen dashboard</p>
+              <h2 className="text-2xl font-bold font-display text-slate-900 tracking-tight">
+                {isRegisterMode ? 'Create Staff Account' : 'Welcome Back'}
+              </h2>
+              <p className="text-slate-500 text-sm mt-1">
+                {isRegisterMode ? 'Register a new kitchen staff account' : 'Sign in to your kitchen dashboard'}
+              </p>
             </div>
 
             {/* Messages */}
@@ -107,8 +134,37 @@ export const StaffLogin: React.FC = () => {
               </div>
             )}
 
-            {/* SIGN IN FORM */}
+            {successMessage && (
+              <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-100 text-emerald-900 rounded-xl text-xs flex items-start gap-2.5">
+                <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-emerald-600" />
+                <span>{successMessage}</span>
+              </div>
+            )}
+
+            {/* SIGN IN / UP FORM */}
             <form onSubmit={handleSignIn} className="space-y-4">
+              {isRegisterMode && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <User size={16} />
+                    </div>
+                    <input
+                      id="staff-fullname"
+                      type="text"
+                      required={isRegisterMode}
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Chef Luigi"
+                      className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-tomato focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Work Email
@@ -168,14 +224,25 @@ export const StaffLogin: React.FC = () => {
                 ) : (
                   <>
                     <LogIn size={18} />
-                    Sign In to Kitchen
+                    <span>{isRegisterMode ? 'Create Staff Account' : 'Sign In to Kitchen'}</span>
                   </>
                 )}
               </button>
             </form>
 
+            <div className="mt-4 text-center">
+              <button
+                id="btn-toggle-staff-mode"
+                type="button"
+                onClick={toggleMode}
+                className="text-xs text-tomato hover:text-tomato-hover font-bold transition-all"
+              >
+                {isRegisterMode ? 'Already have an account? Sign In' : 'Need to register? Create Staff Account'}
+              </button>
+            </div>
+
             {/* Links to switch portals */}
-            <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col items-center gap-3 text-xs">
+            <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col items-center gap-3 text-xs">
               <span className="text-slate-400 font-semibold font-sans">Looking for executive settings?</span>
               <Link
                 to="/admin/login"
