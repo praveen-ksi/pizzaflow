@@ -295,14 +295,14 @@ CREATE TRIGGER tr_orders_sla_metrics
 
 -- 8. Seed Default Menu and Customizer Data
 INSERT INTO public.pizzas (id, name, price, description, image) VALUES
-('P1', 'Margherita', 299, 'Fresh whole-milk mozzarella, sweet tomato herb sauce, aromatic fresh basil leaves, and premium extra virgin olive oil.', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'),
-('P2', 'Chicago Deep Dish', 349, 'Indulgent deep dish layered with rich buttery crust, thick mozzarella block, loaded meats, and chunky vine-ripened tomato sauce.', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'),
-('P3', 'Greek Mediterranean', 329, 'Authentic crumbled feta, premium Kalamata olives, fire-roasted sweet peppers, red onions, and a touch of wild mountain oregano.', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'),
-('P4', 'California Veggie', 339, 'Garden fresh baby spinach, sweet golden corn, roasted garlic cloves, crisp green bell peppers, and vine-matured tomatoes.', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'),
-('P5', 'Farm House', 319, 'A classic, comforting blend of button mushrooms, golden sweet corn, juicy tomatoes, and crunchy farm-fresh capsicum.', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'),
-('P6', 'Pepperoni Classic', 369, 'Generous layers of premium smoky cured beef pepperoni slices, whole-milk mozzarella, and signature tomato reduction.', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'),
+('P1', 'Margherita', 299, 'Fresh whole-milk mozzarella, sweet tomato herb sauce, aromatic fresh basil leaves, and premium extra virgin olive oil.', 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=600&q=80'),
+('P2', 'Chicago Deep Dish', 349, 'Indulgent deep dish layered with rich buttery crust, thick mozzarella block, loaded meats, and chunky vine-ripened tomato sauce.', 'https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?auto=format&fit=crop&w=600&q=80'),
+('P3', 'Greek Mediterranean', 329, 'Authentic crumbled feta, premium Kalamata olives, fire-roasted sweet peppers, red onions, and a touch of wild mountain oregano.', 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80'),
+('P4', 'California Veggie', 339, 'Garden fresh baby spinach, sweet golden corn, roasted garlic cloves, crisp green bell peppers, and vine-matured tomatoes.', 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=600&q=80'),
+('P5', 'Farm House', 319, 'A classic, comforting blend of button mushrooms, golden sweet corn, juicy tomatoes, and crunchy farm-fresh capsicum.', 'https://images.unsplash.com/photo-1506354666786-959d6d497f1a?auto=format&fit=crop&w=600&q=80'),
+('P6', 'Pepperoni Classic', 369, 'Generous layers of premium smoky cured beef pepperoni slices, whole-milk mozzarella, and signature tomato reduction.', 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=600&q=80'),
 ('P7', 'BBQ Chicken', 379, 'Tender fire-grilled hickory chicken breast, caramelized onions, sweet tangy barbecue drizzle, and fresh cilantro.', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'),
-('P8', 'Paneer Tikka', 349, 'Tantalizing spiced cottage cheese (Paneer) tikka cubes, roasted baby onions, crisp capsicum, and a spicy peri-peri finishing drizzle.', 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80')
+('P8', 'Paneer Tikka', 349, 'Tantalizing spiced cottage cheese (Paneer) tikka cubes, roasted baby onions, crisp capsicum, and a spicy peri-peri finishing drizzle.', 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=600&q=80')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   price = EXCLUDED.price,
@@ -359,7 +359,7 @@ ON CONFLICT (id) DO UPDATE SET
             </div>
             <div>
               <h3 className="font-bold text-slate-900 font-display flex flex-wrap items-center gap-2 text-sm sm:text-base">
-                PizzaFlow Backend Configuration
+                Slicematic Backend Configuration
                 {isSupabaseConfigured ? (
                   <span className="text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-0.5 rounded-full">
                     Supabase Connected
@@ -426,17 +426,17 @@ ON CONFLICT (id) DO UPDATE SET
                         Demo Mode Accounts
                       </h4>
                       <p className="text-slate-600 text-xs leading-relaxed mb-4">
-                        To test PizzaFlow instantly before configuring Supabase, we pre-loaded mock credentials backed by secure local storage:
+                        To test Slicematic instantly before configuring Supabase, we pre-loaded mock credentials backed by secure local storage:
                       </p>
                       
                       <div className="space-y-2 text-xs font-mono">
                         <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200">
                           <span className="text-tomato font-semibold">Admin Account</span>
-                          <span className="text-slate-700 font-medium">admin@pizzaflow.com</span>
+                          <span className="text-slate-700 font-medium font-bold">admin@slicematic.com</span>
                         </div>
                         <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200">
                           <span className="text-tomato font-semibold">Staff Account</span>
-                          <span className="text-slate-700 font-medium">staff@pizzaflow.com</span>
+                          <span className="text-slate-700 font-medium font-bold">staff@slicematic.com</span>
                         </div>
                         <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-200">
                           <span className="text-slate-400 font-medium">Shared Password</span>
@@ -631,7 +631,7 @@ ON CONFLICT (id) DO UPDATE SET
                     <li>Create a free project at <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-tomato hover:underline font-semibold">supabase.com</a>.</li>
                     <li>Go to your project's <strong>SQL Editor</strong>, paste the schema above, and run it.</li>
                     <li>Under <strong>Project Settings &gt; API</strong>, retrieve your Project URL and Anon Key.</li>
-                    <li>Open the <strong>Secrets panel</strong> in the AI Studio side-drawer, and define both <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.</li>
+                    <li>Open the <strong>Secrets panel</strong> in the side-drawer, and define both <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.</li>
                     <li>Sign up a user via the application or Supabase Auth console, insert their role in the profiles table, and log in!</li>
                   </ol>
                 </div>

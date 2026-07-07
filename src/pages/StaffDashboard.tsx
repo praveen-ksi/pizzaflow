@@ -180,7 +180,7 @@ export const StaffDashboard: React.FC = () => {
               <span className="text-white font-black text-lg">P</span>
             </div>
             <span className="text-xl font-bold font-display tracking-tight text-slate-900">
-              Pizza<span className="text-tomato">Flow</span>
+              Slice<span className="text-tomato">matic</span>
               <span className="text-[10px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-100 px-2.5 py-0.5 rounded ml-2.5 uppercase">
                 Kitchen Desk
               </span>

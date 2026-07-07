@@ -7,6 +7,7 @@ import React from 'react';
 import { Pizza } from '../types';
 import { Plus, ShoppingBag } from 'lucide-react';
 import { motion } from 'motion/react';
+import { getPizzaImage } from '../lib/pizzaImages';
 
 interface PizzaCardProps {
   pizza: Pizza;
@@ -25,7 +26,7 @@ export const PizzaCard: React.FC<PizzaCardProps> = ({ pizza, onAddToCart }) => {
       {/* Pizza Image Block */}
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
         <img
-          src={pizza.image}
+          src={getPizzaImage(pizza.name, pizza.image)}
           alt={pizza.name}
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"

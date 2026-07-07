@@ -307,7 +307,7 @@ export const CustomerPortal: React.FC = () => {
                 <Flame size={18} className="animate-pulse" />
               </div>
               <span className="font-extrabold font-display tracking-tight text-slate-900 text-sm sm:text-base">
-                PizzaFlow Guest Build
+                Slicematic
               </span>
             </div>
           </div>

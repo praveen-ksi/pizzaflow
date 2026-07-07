@@ -23,7 +23,8 @@ import {
   Sliders,
   Database,
   Upload,
-  Sparkles
+  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 import { OrdersDashboard } from '../components/OrdersDashboard';
 import { AIForecast } from '../components/AIForecast';
@@ -42,6 +43,7 @@ import {
   uploadTableData
 } from '../lib/dataLoader';
 import { Pizza as PizzaType, PizzaBase as BaseType, PizzaTopping as ToppingType } from '../types';
+import { getPizzaImage } from '../lib/pizzaImages';
 
 export const AdminDashboard: React.FC = () => {
   const { user, profile, signOut, isDemoMode } = useAuth();
@@ -71,6 +73,7 @@ export const AdminDashboard: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
   const [importResult, setImportResult] = useState<{ success: boolean; text: string } | null>(null);
   const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const reloadData = async () => {
     setLoading(true);
@@ -99,6 +102,7 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     if (!importText.trim()) {
       setImportPreview([]);
+      setValidationError(null);
       return;
     }
     try {
@@ -107,29 +111,106 @@ export const AdminDashboard: React.FC = () => {
         .map(line => line.trim())
         .filter(line => line.length > 0 && !line.startsWith('#'));
 
-      const parsed = lines.map(line => {
+      let errorMsg: string | null = null;
+
+      const parsed = lines.map((line, idx) => {
         const parts = line.split(';');
-        if (importTable === 'pizzas') {
-          const [id, name, priceStr, desc, img] = parts;
+        const lineNum = idx + 1;
+        const id = parts[0]?.trim() || '';
+        const name = parts[1]?.trim() || '';
+
+        if (parts.length < 3) {
+          if (!errorMsg) {
+            errorMsg = `Validation Error: Row #${lineNum} does not contain at least 3 parts separated by semicolons (Format: ID;Name;Price).`;
+          }
           return {
-            id: id?.trim() || '?',
-            name: name?.trim() || '?',
-            price: parseInt(priceStr, 10) || 0,
+            id: id || '?',
+            name: name || '?',
+            price: 0,
+            invalidId: true,
+            invalidPrice: true
+          };
+        }
+
+        if (importTable === 'pizzas') {
+          const [idVal, nameVal, priceStr, desc, img] = parts;
+          const cleanId = idVal?.trim() || '';
+          const cleanName = nameVal?.trim() || '';
+          const cleanPriceStr = priceStr?.trim() || '';
+          const parsedPrice = cleanPriceStr.length > 0 ? parseInt(cleanPriceStr, 10) : NaN;
+          
+          const isIdInvalid = !/^[pP]\d+$/.test(cleanId);
+          const isPriceInvalid = isNaN(parsedPrice) || parsedPrice <= 0;
+
+          if (isIdInvalid && !errorMsg) {
+            errorMsg = `Validation Error: Row #${lineNum} ("${cleanName || cleanId || 'Unknown'}") has an invalid Pizza ID format "${cleanId}". Pizza IDs must start with 'P' followed by a number (e.g. P1, P2).`;
+          } else if (isPriceInvalid && !errorMsg) {
+            errorMsg = `Validation Error: Row #${lineNum} ("${cleanName || cleanId || 'Unknown'}") is missing a valid price. Please provide a positive integer price (e.g. 299).`;
+          }
+
+          return {
+            id: cleanId || '?',
+            name: cleanName || '?',
+            price: isNaN(parsedPrice) ? 0 : parsedPrice,
             description: desc?.trim() || '',
-            image: img?.trim() || ''
+            image: img?.trim() || '',
+            invalidId: isIdInvalid,
+            invalidPrice: isPriceInvalid
+          };
+        } else if (importTable === 'bases') {
+          const [idVal, nameVal, priceStr] = parts;
+          const cleanId = idVal?.trim() || '';
+          const cleanName = nameVal?.trim() || '';
+          const cleanPriceStr = priceStr?.trim() || '';
+          const parsedPrice = cleanPriceStr.length > 0 ? parseInt(cleanPriceStr, 10) : NaN;
+          
+          const isIdInvalid = !/^[bB]\d+$/.test(cleanId);
+          const isPriceInvalid = isNaN(parsedPrice) || parsedPrice <= 0;
+
+          if (isIdInvalid && !errorMsg) {
+            errorMsg = `Validation Error: Row #${lineNum} ("${cleanName || cleanId || 'Unknown'}") has an invalid Base ID format "${cleanId}". Base IDs must start with 'B' followed by a number (e.g. B1, B2).`;
+          } else if (isPriceInvalid && !errorMsg) {
+            errorMsg = `Validation Error: Row #${lineNum} ("${cleanName || cleanId || 'Unknown'}") is missing a valid price. Please provide a positive integer price.`;
+          }
+
+          return {
+            id: cleanId || '?',
+            name: cleanName || '?',
+            price: isNaN(parsedPrice) ? 0 : parsedPrice,
+            invalidId: isIdInvalid,
+            invalidPrice: isPriceInvalid
           };
         } else {
-          const [id, name, priceStr] = parts;
+          // toppings
+          const [idVal, nameVal, priceStr] = parts;
+          const cleanId = idVal?.trim() || '';
+          const cleanName = nameVal?.trim() || '';
+          const cleanPriceStr = priceStr?.trim() || '';
+          const parsedPrice = cleanPriceStr.length > 0 ? parseInt(cleanPriceStr, 10) : NaN;
+          
+          const isIdInvalid = !/^[tT]\d+$/.test(cleanId);
+          const isPriceInvalid = isNaN(parsedPrice) || parsedPrice <= 0;
+
+          if (isIdInvalid && !errorMsg) {
+            errorMsg = `Validation Error: Row #${lineNum} ("${cleanName || cleanId || 'Unknown'}") has an invalid Topping ID format "${cleanId}". Topping IDs must start with 'T' followed by a number (e.g. T1, T2).`;
+          } else if (isPriceInvalid && !errorMsg) {
+            errorMsg = `Validation Error: Row #${lineNum} ("${cleanName || cleanId || 'Unknown'}") is missing a valid price. Please provide a positive integer price.`;
+          }
+
           return {
-            id: id?.trim() || '?',
-            name: name?.trim() || '?',
-            price: parseInt(priceStr, 10) || 0
+            id: cleanId || '?',
+            name: cleanName || '?',
+            price: isNaN(parsedPrice) ? 0 : parsedPrice,
+            invalidId: isIdInvalid,
+            invalidPrice: isPriceInvalid
           };
         }
       });
       setImportPreview(parsed);
+      setValidationError(errorMsg);
     } catch (e) {
       setImportPreview([]);
+      setValidationError('Failed to parse input data. Please ensure rows are semicolon-separated.');
     }
   }, [importText, importTable]);
 
@@ -158,6 +239,10 @@ export const AdminDashboard: React.FC = () => {
     e.preventDefault();
     if (!importText.trim()) {
       setImportResult({ success: false, text: 'Please upload a file or paste configuration data first.' });
+      return;
+    }
+    if (validationError) {
+      setImportResult({ success: false, text: validationError });
       return;
     }
     setLoading(true);
@@ -438,7 +523,7 @@ export const AdminDashboard: React.FC = () => {
               <span className="text-white font-black text-lg">P</span>
             </div>
             <span className="text-xl font-bold font-display tracking-tight text-slate-900">
-              Pizza<span className="text-tomato">Flow</span>
+              Slice<span className="text-tomato">matic</span>
               <span className="text-[10px] font-mono font-bold bg-tomato/5 text-tomato border border-tomato/10 px-2.5 py-0.5 rounded ml-2.5">
                 ADMIN CONTROL
               </span>
@@ -483,7 +568,7 @@ export const AdminDashboard: React.FC = () => {
                 Welcome Back, {profile?.full_name || 'Chef'}!
               </h1>
               <p className="text-white/90 text-sm mt-1.5 max-w-xl leading-relaxed">
-                The PizzaFlow administrative dashboard is active. Manage menu options, update item pricing, customize recipes, and assign team roles with full oversight.
+                The Slicematic administrative dashboard is active. Manage menu options, update item pricing, customize recipes, and assign team roles with full oversight.
               </p>
             </div>
             
@@ -718,7 +803,7 @@ export const AdminDashboard: React.FC = () => {
                         <td className="py-3.5 px-2 font-mono font-bold text-slate-500">{pizza.id}</td>
                         <td className="py-3.5 px-2">
                           <div className="flex items-center gap-2">
-                            <img src={pizza.image} alt={pizza.name} className="w-7 h-7 rounded-lg object-cover" />
+                            <img src={getPizzaImage(pizza.name, pizza.image)} alt={pizza.name} className="w-7 h-7 rounded-lg object-cover" />
                             <span className="font-bold text-slate-900">{pizza.name}</span>
                           </div>
                         </td>
@@ -1017,124 +1102,191 @@ export const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Left Column: Form and File Drag & Drop */}
-              <div className="lg:col-span-2 bg-white border border-slate-200 rounded-[28px] p-6 shadow-sm space-y-6">
+              <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-[32px] p-6 sm:p-8 shadow-xs space-y-8">
                 <div>
-                  <h3 className="text-lg font-extrabold text-slate-900 font-display">Data Import API</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Upload configuration files or write semicolon-separated configurations directly to update database tables.
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-tomato bg-tomato/5 px-2.5 py-1 rounded-md">
+                      Database Sync API
+                    </span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-55 bg-emerald-500 animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900 font-display mt-2.5">Data Import Console</h3>
+                  <p className="text-slate-500 text-xs mt-1 leading-relaxed">
+                    Instantly batch update your system tables. Upload local configurations or paste semicolon-separated values directly into the interactive code terminal.
                   </p>
                 </div>
 
-                <form onSubmit={handleImportSubmit} className="space-y-4">
-                  {/* Select Table & Presets */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Target Database Table</label>
-                      <select
-                        id="select-import-table"
-                        value={importTable}
-                        onChange={(e) => {
-                          setImportTable(e.target.value as any);
+                <form onSubmit={handleImportSubmit} className="space-y-6">
+                  {/* Select Table & Presets (Re-designed with Segmented Control for Target Table) */}
+                  <div className="space-y-3.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      1. Select Target Database Table
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImportTable('pizzas');
                           setImportResult(null);
                         }}
-                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-tomato"
+                        className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs font-bold transition-all ${
+                          importTable === 'pizzas'
+                            ? 'bg-white text-slate-900 shadow-sm border border-slate-100'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
                       >
-                        <option value="pizzas">Pizzas Table (pizzas)</option>
-                        <option value="bases">Pizza Bases Table (pizza_bases)</option>
-                        <option value="toppings">Pizza Toppings Table (pizza_toppings)</option>
-                      </select>
+                        <Pizza size={14} className={importTable === 'pizzas' ? 'text-tomato' : 'text-slate-400'} />
+                        <span>Pizzas (pizzas)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImportTable('bases');
+                          setImportResult(null);
+                        }}
+                        className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs font-bold transition-all ${
+                          importTable === 'bases'
+                            ? 'bg-white text-slate-900 shadow-sm border border-slate-100'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <ChefHat size={14} className={importTable === 'bases' ? 'text-tomato' : 'text-slate-400'} />
+                        <span>Bases (bases)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImportTable('toppings');
+                          setImportResult(null);
+                        }}
+                        className={`flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs font-bold transition-all ${
+                          importTable === 'toppings'
+                            ? 'bg-white text-slate-900 shadow-sm border border-slate-100'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <Sliders size={14} className={importTable === 'toppings' ? 'text-tomato' : 'text-slate-400'} />
+                        <span>Toppings (toppings)</span>
+                      </button>
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Quick Fill from Source Files</label>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleLoadDefaultText('pizzas')}
-                          className="flex-1 py-2 px-3 rounded-xl text-2xs font-bold border border-slate-200 hover:border-tomato bg-white hover:bg-tomato/5 text-slate-700 hover:text-tomato transition"
-                        >
-                          Pizzas TXT
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleLoadDefaultText('bases')}
-                          className="flex-1 py-2 px-3 rounded-xl text-2xs font-bold border border-slate-200 hover:border-tomato bg-white hover:bg-tomato/5 text-slate-700 hover:text-tomato transition"
-                        >
-                          Bases TXT
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleLoadDefaultText('toppings')}
-                          className="flex-1 py-2 px-3 rounded-xl text-2xs font-bold border border-slate-200 hover:border-tomato bg-white hover:bg-tomato/5 text-slate-700 hover:text-tomato transition"
-                        >
-                          Toppings TXT
-                        </button>
-                      </div>
+                  {/* Quick Fill section - Elegant design with Source File tags */}
+                  <div className="bg-slate-50/50 rounded-2xl p-4.5 border border-slate-100 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-mono font-bold text-slate-500 uppercase tracking-wider">
+                        Quick Template Seeding
+                      </span>
+                      <span className="text-[10px] text-slate-400">Click to fill with default files</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleLoadDefaultText('pizzas')}
+                        className={`flex items-center gap-2 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
+                          importTable === 'pizzas'
+                            ? 'bg-tomato/5 border-tomato/30 text-tomato'
+                            : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <FileText size={12} />
+                        <span>Pizzas Default</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleLoadDefaultText('bases')}
+                        className={`flex items-center gap-2 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
+                          importTable === 'bases'
+                            ? 'bg-tomato/5 border-tomato/30 text-tomato'
+                            : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <FileText size={12} />
+                        <span>Bases Default</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleLoadDefaultText('toppings')}
+                        className={`flex items-center gap-2 py-1.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
+                          importTable === 'toppings'
+                            ? 'bg-tomato/5 border-tomato/30 text-tomato'
+                            : 'bg-white border-slate-200/80 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <FileText size={12} />
+                        <span>Toppings Default</span>
+                      </button>
                     </div>
                   </div>
 
                   {/* Drag and drop Area */}
-                  <div
-                    onDragEnter={handleDrag}
-                    onDragOver={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDrop={handleDrop}
-                    className={`relative border-2 border-dashed rounded-2xl p-6 text-center transition flex flex-col items-center justify-center cursor-pointer ${
-                      dragActive
-                        ? 'border-tomato bg-tomato/5'
-                        : 'border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50'
-                    }`}
-                  >
-                    <input
-                      id="file-import-upload"
-                      type="file"
-                      accept=".txt"
-                      onChange={handleFileInputChange}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <Upload size={28} className="text-slate-400 mb-2.5" />
-                    <p className="text-xs font-extrabold text-slate-700">Drag & Drop .txt configuration file here</p>
-                    <p className="text-[10px] text-slate-400 mt-1">or click to browse your local computer (e.g. Types_of_Pizza.txt)</p>
+                  <div className="space-y-2.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      2. Upload Config File
+                    </label>
+                    <div
+                      onDragEnter={handleDrag}
+                      onDragOver={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDrop={handleDrop}
+                      className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 flex flex-col items-center justify-center cursor-pointer ${
+                        dragActive
+                          ? 'border-tomato bg-tomato/5'
+                          : 'border-slate-200 hover:border-slate-300/80 bg-slate-50/20 hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <input
+                        id="file-import-upload"
+                        type="file"
+                        accept=".txt"
+                        onChange={handleFileInputChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className={`p-3 rounded-xl border mb-3 transition-colors ${
+                        dragActive ? 'bg-tomato/10 border-tomato/20 text-tomato' : 'bg-white border-slate-100 text-slate-400 shadow-2xs'
+                      }`}>
+                        <Upload size={22} className={dragActive ? 'scale-110 transition-transform' : ''} />
+                      </div>
+                      <p className="text-xs font-bold text-slate-800">Drag & Drop file here</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Accepts raw text format (.txt) configuration</p>
+                    </div>
                   </div>
 
-                  {/* Text-Area editor */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold text-slate-700">Configuration Editor</label>
-                      {importText && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImportText('');
-                            setImportResult(null);
-                          }}
-                          className="text-[10px] font-bold text-rose-500 hover:underline"
-                        >
-                          Clear Text
-                        </button>
-                      )}
+                  {/* Validation Error banner inside the form */}
+                  {validationError && (
+                    <div className="p-4 rounded-2xl text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-100/80 flex items-start gap-2.5">
+                      <ShieldAlert size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold uppercase tracking-wider text-[10px] text-rose-700">File Validation Failed</div>
+                        <div className="mt-1 font-sans text-slate-600 font-normal leading-relaxed">{validationError}</div>
+                      </div>
                     </div>
-                    <textarea
-                      id="textarea-import-data"
-                      rows={8}
-                      value={importText}
-                      onChange={(e) => setImportText(e.target.value)}
-                      placeholder="Enter semicolon-separated values, one per line..."
-                      className="w-full px-3.5 py-3 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-800 focus:outline-none focus:border-tomato focus:ring-1 focus:ring-tomato/20"
-                    />
-                  </div>
+                  )}
 
                   {/* Action button */}
-                  <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center justify-between pt-2">
                     <button
                       id="btn-execute-import"
                       type="submit"
-                      disabled={loading || !importText.trim()}
-                      className="w-full sm:w-auto flex items-center justify-center gap-2 py-2.5 px-6 rounded-xl text-xs font-bold text-white bg-tomato hover:bg-tomato-hover shadow-md shadow-tomato/10 transition disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                      disabled={loading || !importText.trim() || !!validationError}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 py-3 px-8 rounded-xl text-xs font-bold text-white bg-tomato hover:bg-tomato-hover shadow-md shadow-tomato/10 transition disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
                     >
                       <Database size={14} />
-                      {loading ? 'Processing Upload API...' : 'Upload & Sync Database'}
+                      {loading ? 'Processing Upload API...' : 'Sync Config & Update Database'}
                     </button>
+
+                    {importText && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImportText('');
+                          setImportResult(null);
+                        }}
+                        className="text-xs font-bold text-rose-600 hover:text-rose-700 transition"
+                      >
+                        Clear Current File
+                      </button>
+                    )}
                   </div>
                 </form>
 
@@ -1152,57 +1304,30 @@ export const AdminDashboard: React.FC = () => {
                 )}
               </div>
 
-              {/* Right Column: Documentation / Help & Live Preview */}
+              {/* Right Column: Live Preview Only */}
               <div className="space-y-6">
                 
-                {/* Format documentation */}
-                <div className="bg-white border border-slate-200 rounded-[28px] p-6 shadow-sm space-y-4">
-                  <h4 className="text-xs font-extrabold font-mono uppercase tracking-wider text-slate-400">
-                    File API Specifications
-                  </h4>
-                  <div className="space-y-3.5 text-xs text-slate-600">
-                    <p className="leading-relaxed">
-                      The database parser expects files formatted with semicolon-separated values (one record per line).
-                    </p>
-                    <div className="space-y-2 font-mono text-[10px] bg-slate-50 p-3 rounded-lg border border-slate-200/60">
-                      <div>
-                        <div className="text-tomato font-bold">pizzas table:</div>
-                        <div className="text-slate-400">ID;Name;Price;Description;ImageURL</div>
-                        <div className="text-slate-700 mt-1">P9;Classic Supreme;399;Tender olives...;https://...</div>
-                      </div>
-                      <hr className="border-slate-200 my-2" />
-                      <div>
-                        <div className="text-rose-600 font-bold">pizza_bases table:</div>
-                        <div className="text-slate-400">ID;Name;Price</div>
-                        <div className="text-slate-700 mt-1">B6;Stuffed Crust;249</div>
-                      </div>
-                      <hr className="border-slate-200 my-2" />
-                      <div>
-                        <div className="text-amber-600 font-bold">pizza_toppings table:</div>
-                        <div className="text-slate-400">ID;Name;Price</div>
-                        <div className="text-slate-700 mt-1">T11;Pineapple Chunks;59</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Live parsed preview container */}
                 <div className="bg-white border border-slate-200 rounded-[28px] p-6 shadow-sm space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-extrabold font-mono uppercase tracking-wider text-slate-400">
                       Live Parsed Preview
                     </h4>
-                    <span className="text-[10px] bg-tomato/5 text-tomato font-bold border border-tomato/10 px-2 py-0.5 rounded">
-                      {importPreview.length} Rows Detected
+                    <span className={`text-[10px] font-bold border px-2 py-0.5 rounded ${
+                      validationError 
+                        ? 'bg-rose-50 text-rose-600 border-rose-100' 
+                        : 'bg-tomato/5 text-tomato border-tomato/10'
+                    }`}>
+                      {validationError ? 'Parsing Blocked' : `${importPreview.length} Rows Detected`}
                     </span>
                   </div>
 
                   {importPreview.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-slate-400">
-                      Upload/paste lines to see real-time parsing visualization.
+                    <div className="py-12 text-center text-xs text-slate-400">
+                      Upload a file or choose a default template above to preview the system parser output.
                     </div>
                   ) : (
-                    <div className="max-h-60 overflow-y-auto border border-slate-100 rounded-xl">
+                    <div className="max-h-80 overflow-y-auto border border-slate-100 rounded-xl">
                       <table className="w-full text-left text-[10px] border-collapse font-mono">
                         <thead>
                           <tr className="bg-slate-50 text-slate-400 font-bold border-b border-slate-100 sticky top-0">
@@ -1212,20 +1337,43 @@ export const AdminDashboard: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {importPreview.slice(0, 8).map((row, index) => (
-                            <tr key={index} className="border-b border-slate-50 hover:bg-slate-50/50">
-                              <td className="py-2 px-2.5 font-bold text-slate-500">{row.id}</td>
-                              <td className="py-2 px-2.5 text-slate-900 font-sans truncate max-w-[120px]">{row.name}</td>
-                              <td className="py-2 px-2.5 text-right text-tomato font-bold">₹{row.price}</td>
-                            </tr>
-                          ))}
+                          {importPreview.map((row, index) => {
+                            const isRowInvalid = row.invalidPrice || row.invalidId;
+                            return (
+                              <tr 
+                                key={index} 
+                                className={`border-b border-slate-50 ${
+                                  isRowInvalid 
+                                    ? 'bg-rose-50/50 hover:bg-rose-50/80 text-rose-800' 
+                                    : 'hover:bg-slate-50/50'
+                                }`}
+                              >
+                                <td className="py-2.5 px-2.5 font-bold">
+                                  {row.invalidId ? (
+                                    <span className="text-[9px] font-mono font-bold bg-rose-100/60 text-rose-600 border border-rose-200/50 px-1.5 py-0.5 rounded">
+                                      BAD ID: {row.id}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-500">{row.id}</span>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-2.5 font-sans truncate max-w-[120px] font-medium text-slate-900">
+                                  {row.name}
+                                </td>
+                                <td className="py-2.5 px-2.5 text-right font-bold">
+                                  {row.invalidPrice ? (
+                                    <span className="text-[9px] font-mono font-bold bg-rose-100/60 text-rose-600 border border-rose-200/50 px-1.5 py-0.5 rounded">
+                                      MISSING/INVALID
+                                    </span>
+                                  ) : (
+                                    `₹${row.price}`
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
-                      {importPreview.length > 8 && (
-                        <div className="p-2 text-center text-[9px] text-slate-400 bg-slate-50/50 border-t border-slate-50">
-                          And {importPreview.length - 8} more rows...
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

@@ -472,6 +472,17 @@ export async function uploadTableData(
         throw new Error(`Validation Error on Line ${i + 1}: Item number/ID is required.`);
       }
 
+      // Check ID format depending on tableType
+      if (tableType === 'pizzas' && !/^[pP]\d+$/.test(id)) {
+        throw new Error(`Validation Error on Line ${i + 1} ("${name || 'Unknown'}"): Invalid Pizza ID format "${id}". Pizza IDs must start with 'P' followed by a number (e.g. P1, P2).`);
+      }
+      if (tableType === 'bases' && !/^[bB]\d+$/.test(id)) {
+        throw new Error(`Validation Error on Line ${i + 1} ("${name || 'Unknown'}"): Invalid Base ID format "${id}". Base IDs must start with 'B' followed by a number (e.g. B1, B2).`);
+      }
+      if (tableType === 'toppings' && !/^[tT]\d+$/.test(id)) {
+        throw new Error(`Validation Error on Line ${i + 1} ("${name || 'Unknown'}"): Invalid Topping ID format "${id}". Topping IDs must start with 'T' followed by a number (e.g. T1, T2).`);
+      }
+
       // 1. Entering a price number instead of an item number
       if (/^\d+$/.test(id)) {
         throw new Error(`Validation Error on Line ${i + 1}: Entered a price number "${id}" instead of a valid item number (e.g. P1, B1, T1).`);
@@ -482,8 +493,9 @@ export async function uploadTableData(
         throw new Error(`Validation Error on Line ${i + 1}: Price field is missing for item "${name || id}".`);
       }
 
-      if (isNaN(Number(priceStr))) {
-        throw new Error(`Validation Error on Line ${i + 1}: Invalid price "${priceStr}" for item "${name || id}".`);
+      const priceVal = parseInt(priceStr, 10);
+      if (isNaN(priceVal) || priceVal <= 0) {
+        throw new Error(`Validation Error on Line ${i + 1} ("${name || id}"): Price must be a positive integer.`);
       }
     }
 

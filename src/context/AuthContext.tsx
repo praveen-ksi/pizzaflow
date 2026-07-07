@@ -22,14 +22,14 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Local storage keys for Mock/Demo mode
-const MOCK_USERS_KEY = 'pizzaflow_mock_users';
-const MOCK_PROFILES_KEY = 'pizzaflow_mock_profiles';
-const MOCK_SESSION_KEY = 'pizzaflow_mock_session';
+const MOCK_USERS_KEY = 'slicematic_mock_users';
+const MOCK_PROFILES_KEY = 'slicematic_mock_profiles';
+const MOCK_SESSION_KEY = 'slicematic_mock_session';
 
 // Pre-seeded mock data
 const DEFAULT_MOCK_USERS = [
-  { id: 'mock-admin-id', email: 'admin@pizzaflow.com', password: 'password123' },
-  { id: 'mock-staff-id', email: 'staff@pizzaflow.com', password: 'password123' },
+  { id: 'mock-admin-id', email: 'admin@slicematic.com', password: 'password123' },
+  { id: 'mock-staff-id', email: 'staff@slicematic.com', password: 'password123' },
 ];
 
 const DEFAULT_MOCK_PROFILES: Profile[] = [

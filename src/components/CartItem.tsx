@@ -9,6 +9,7 @@ import { BaseSelector } from './BaseSelector';
 import { ToppingsSelector } from './ToppingsSelector';
 import { Trash2, ChevronDown, ChevronUp, Sliders, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { getPizzaImage } from '../lib/pizzaImages';
 
 interface CartItemProps {
   item: CartItemType;
@@ -52,7 +53,7 @@ export const CartItem: React.FC<CartItemProps> = ({
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 rounded-xl overflow-hidden bg-slate-50 shrink-0 border border-slate-100">
             <img
-              src={item.pizza.image}
+              src={getPizzaImage(item.pizza.name, item.pizza.image)}
               alt={item.pizza.name}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"

@@ -1,7 +1,7 @@
 -- ==========================================
--- PIZZAFLOW DATABASE SCHEMA (SUPABASE/POSTGRESQL)
+-- SLICEMATIC DATABASE SCHEMA (SUPABASE/POSTGRESQL)
 -- ==========================================
--- Author: PizzaFlow Engineering
+-- Author: Slicematic Engineering
 -- Date: July 2026
 -- Description: Production-ready, fully-normalized schema for order tracking, 
 --              pizza item snapshots, simulated PizzaPay payments, and 

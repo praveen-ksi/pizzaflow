@@ -1,5 +1,5 @@
 {
-  "name": "PizzaFlow",
+  "name": "Slicematic",
   "description": "A modern full-stack pizza ordering and management system featuring a secure, role-based authentication portal for Admins, Staff, and Customers.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

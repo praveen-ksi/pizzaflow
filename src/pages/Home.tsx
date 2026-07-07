@@ -11,7 +11,7 @@ import { motion } from 'motion/react';
 export const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-cream font-sans text-slate-900 relative overflow-hidden selection:bg-tomato/10 selection:text-tomato">
-      {/* Decorative pizza flow background circles to mimic the design panel */}
+      {/* Decorative slicematic background circles to mimic the design panel */}
       <div className="absolute top-[-200px] right-[-200px] w-[500px] h-[500px] bg-tomato/5 rounded-full blur-3xl pointer-events-none -z-10" />
       <div className="absolute bottom-[-150px] left-[-150px] w-[450px] h-[450px] bg-amber-500/5 rounded-full blur-3xl pointer-events-none -z-10" />
 
@@ -19,10 +19,10 @@ export const Home: React.FC = () => {
       <header className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between border-b border-slate-200/60">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-tomato rounded-xl flex items-center justify-center shadow-md shadow-tomato/20">
-            <span className="text-white font-extrabold text-xl font-display">P</span>
+            <span className="text-white font-extrabold text-xl font-display">S</span>
           </div>
           <span className="text-2xl font-bold font-display tracking-tight text-slate-900">
-            Pizza<span className="text-tomato">Flow</span>
+            Slice<span className="text-tomato">matic</span>
           </span>
         </div>
         <div className="flex items-center gap-2 font-mono text-xs text-slate-600 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-xs">
@@ -155,7 +155,7 @@ export const Home: React.FC = () => {
 
       {/* Footer */}
       <footer className="text-center py-10 border-t border-slate-200 text-slate-400 text-xs font-mono">
-        PizzaFlow Inc. © 2026. Made with Google AI Studio.
+        Slicematic Inc. © 2026. All rights reserved.
       </footer>
     </div>
   );

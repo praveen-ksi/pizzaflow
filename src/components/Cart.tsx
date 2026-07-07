@@ -153,8 +153,15 @@ export const Cart: React.FC<CartProps> = ({
 
   const validateForm = () => {
     const errors: { fullName?: string; phoneNumber?: string } = {};
-    if (!fullName.trim()) {
+    const trimmedName = fullName.trim();
+    if (!trimmedName) {
       errors.fullName = 'Full Name is required';
+    } else if (trimmedName.length > 40) {
+      errors.fullName = 'Full Name must be 40 characters or less';
+    } else if (/[^a-zA-Z\s]/.test(trimmedName)) {
+      errors.fullName = 'Full Name can only contain letters and spaces';
+    } else if (/\s{2,}/.test(fullName)) {
+      errors.fullName = 'Full Name cannot contain consecutive spaces';
     }
     
     const phoneTrimmed = phoneNumber.trim();
@@ -221,28 +228,20 @@ export const Cart: React.FC<CartProps> = ({
     if (items.length === 0) return;
     if (!validateForm()) return;
     setDbError(null);
+    setIsPlacing(true);
+
+    // Simulate placing order
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setIsPlacing(false);
 
     if (paymentMethod === 'Cash') {
-      setIsPlacing(true);
-      // Simulate placing offline cash order
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setIsPlacing(false);
       await completeOrderPlacement('CASH-OFFLINE', 'Unpaid (Cash on Delivery)');
-    } else {
-      // Trigger Secure Payment sheet modal
-      setPaymentCardNo('');
-      setPaymentCardName('');
-      setPaymentCardExpiry('');
-      setPaymentCardCvv('');
-      setPaymentUpiId('');
-      setUpiSubMethod('qr');
-      setPaymentOtp('');
-      setPaymentError('');
-      setPaymentErrors({});
-      setPaymentStep('details');
-      setQrTimer(120);
-      setPaymentTxnId(`pay_pizzapay_${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
-      setShowPaymentModal(true);
+    } else if (paymentMethod === 'UPI') {
+      const txnId = `pay_upi_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      await completeOrderPlacement(txnId, 'Paid (UPI)');
+    } else { // Card
+      const txnId = `pay_card_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      await completeOrderPlacement(txnId, 'Paid (Card)');
     }
   };
 
@@ -317,7 +316,7 @@ export const Cart: React.FC<CartProps> = ({
             Order Dispatched to Kitchen!
           </h2>
           <p className="text-emerald-800/80 text-sm max-w-md mx-auto leading-relaxed">
-            Your customized pizzas have been loaded directly into the PizzaFlow kitchen dispatch system. Oven specialists are heating the stones!
+            Your customized pizzas have been loaded directly into the Slicematic kitchen dispatch system. Oven specialists are heating the stones!
           </p>
         </div>
 
@@ -338,7 +337,6 @@ export const Cart: React.FC<CartProps> = ({
             <p><strong>Payment Method:</strong> {paymentMethod}</p>
             {paymentMethod !== 'Cash' && (
               <>
-                <p><strong>Gateway Partner:</strong> <span className="text-tomato font-bold">{paymentPartner}</span></p>
                 <p className="font-mono text-[10px] text-slate-500 mt-1"><strong>Txn ID:</strong> {paymentTxnId}</p>
                 <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-0.5">
                   <ShieldCheck size={12} /> SECURED & AUTHORIZED
@@ -375,7 +373,7 @@ export const Cart: React.FC<CartProps> = ({
           onClick={handleResetCart}
           className="inline-flex items-center gap-2 py-3.5 px-6 rounded-xl font-bold text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md shadow-emerald-600/10"
         >
-          <span>Bake Another Pizza</span>
+          <span>Order Again</span>
           <ArrowRight size={14} />
         </button>
       </motion.div>
@@ -478,7 +476,13 @@ export const Cart: React.FC<CartProps> = ({
                   id="input-checkout-name"
                   type="text"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => {
+                    const cleaned = e.target.value
+                      .replace(/[^a-zA-Z\s]/g, '') // Remove numbers and special characters
+                      .replace(/\s+/g, ' ')       // Prevent consecutive spaces
+                      .slice(0, 40);              // Max 40 characters
+                    setFullName(cleaned);
+                  }}
                   placeholder="e.g. Praveen Kumar"
                   className={`block w-full px-4 py-3 bg-slate-50 border rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white transition-all duration-200 ${
                     formErrors.fullName ? 'border-rose-400 focus:border-rose-500 ring-2 ring-rose-500/10' : 'border-slate-200 focus:border-tomato focus:ring-2 focus:ring-tomato/10'
@@ -537,33 +541,7 @@ export const Cart: React.FC<CartProps> = ({
                 </div>
               </div>
 
-              {/* Dynamic Gateway Choice Integration */}
-              {paymentMethod !== 'Cash' && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="space-y-2 mt-2 bg-slate-50 border border-slate-200/60 p-4 rounded-2xl"
-                >
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <ShieldCheck size={14} className="text-tomato" />
-                      Payment Partner Gateway
-                    </label>
-                    <span className="text-[9px] bg-tomato/10 text-tomato font-bold px-2 py-0.5 rounded font-mono">AUTOMATIC</span>
-                  </div>
-                  <div className="mt-1">
-                    <div
-                      className="flex flex-col items-start p-3.5 rounded-xl border border-slate-800 bg-white ring-1 ring-slate-800 shadow-xs text-left"
-                    >
-                      <span className="text-xs font-black tracking-tight text-slate-900 flex items-center gap-1.5">
-                        PizzaPay Gateway
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-semibold mt-1">Unified Pizza Simulation Terminal</span>
-                      <span className="text-[9px] text-slate-400 mt-0.5 leading-normal">Fully simulated mock transaction processing engine for testing checkout loops.</span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+
             </div>
 
             <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
