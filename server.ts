@@ -11,23 +11,9 @@ async function startServer() {
 
   // Enable CORS for cross-origin requests (e.g. from Vercel)
   app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-    } else {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-    }
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    
-    const requestedHeaders = req.headers["access-control-request-headers"];
-    if (requestedHeaders) {
-      res.setHeader("Access-Control-Allow-Headers", requestedHeaders);
-    } else {
-      res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-    }
-    
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
     if (req.method === "OPTIONS") {
       return res.sendStatus(200);
     }

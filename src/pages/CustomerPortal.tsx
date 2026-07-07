@@ -37,6 +37,7 @@ export const CustomerPortal: React.FC = () => {
   const [toppings, setToppings] = useState<PizzaTopping[]>([]);
   const [cart, setCart] = useState<CartItemType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pizzaLimitError, setPizzaLimitError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'menu' | 'cart'>('menu');
   const [isStatusOpen, setIsStatusOpen] = useState(false);
 
@@ -221,6 +222,16 @@ export const CustomerPortal: React.FC = () => {
   };
 
   const handleAddToCart = (pizza: Pizza) => {
+    // Check if total quantity of pizzas will exceed 10
+    const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    if (totalCount >= 10) {
+      setPizzaLimitError('Maximum order limit reached! You cannot order more than 10 pizzas in a single order.');
+      // Auto clear after 5 seconds
+      setTimeout(() => setPizzaLimitError(null), 5000);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     // Standard default base (typically the first one, e.g. Thin Crust)
     const defaultBase = bases[0] || { id: 'B1', name: 'Thin Crust', price: 149 };
     
@@ -233,6 +244,7 @@ export const CustomerPortal: React.FC = () => {
     };
 
     saveCart([...cart, newItem]);
+    setPizzaLimitError(null);
     
     // Smooth scroll or indicator feedback to let the user know it's added (Cart opening deactivated)
   };
@@ -256,10 +268,26 @@ export const CustomerPortal: React.FC = () => {
       handleRemoveItem(itemId);
       return;
     }
+
+    const currentItem = cart.find((item) => item.id === itemId);
+    if (!currentItem) return;
+
+    const currentTotal = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const difference = quantity - currentItem.quantity;
+
+    if (currentTotal + difference > 10) {
+      setPizzaLimitError('Maximum order limit reached! You cannot order more than 10 pizzas in a single order.');
+      // Auto clear after 5 seconds
+      setTimeout(() => setPizzaLimitError(null), 5000);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     const updated = cart.map((item) =>
       item.id === itemId ? { ...item, quantity } : item
     );
     saveCart(updated);
+    setPizzaLimitError(null);
   };
 
   const handleRemoveItem = (itemId: string) => {
@@ -375,6 +403,29 @@ export const CustomerPortal: React.FC = () => {
 
       {/* Main Board */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10 space-y-10">
+        <AnimatePresence>
+          {pizzaLimitError && (
+            <motion.div
+              initial={{ opacity: 0, y: -15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-3 text-amber-900 text-xs font-semibold shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <AlertCircle className="text-amber-600 shrink-0" size={16} />
+                <span>{pizzaLimitError}</span>
+              </div>
+              <button
+                id="btn-close-limit-error"
+                onClick={() => setPizzaLimitError(null)}
+                className="p-1 text-amber-500 hover:text-amber-700 hover:bg-amber-100/50 rounded-lg transition"
+              >
+                <X size={14} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {activeTab === 'menu' ? (
           <div className="space-y-6">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
