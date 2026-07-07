@@ -115,7 +115,24 @@ export const AIForecast: React.FC<AIForecastProps> = ({ pizzas, bases, toppings 
     setError(null);
     setForecast(null);
     try {
-      const apiBaseUrl = (import.meta as any).env?.VITE_API_URL || '';
+      // Determine the API base URL with automatic fallback for external deployments like Vercel
+      const getApiUrl = () => {
+        const envUrl = (import.meta as any).env?.VITE_API_URL;
+        if (envUrl && envUrl.trim() !== '') {
+          return envUrl;
+        }
+        
+        if (typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          // If we're on Vercel or any custom frontend domain, default to the hosted Cloud Run server
+          if (hostname && !hostname.includes('localhost') && !hostname.includes('127.0.0.1') && !hostname.includes('run.app')) {
+            return 'https://ais-pre-g5zslltn4ktu4yrtcsbpi4-927174755944.asia-east1.run.app';
+          }
+        }
+        return '';
+      };
+
+      const apiBaseUrl = getApiUrl();
       const response = await fetch(`${apiBaseUrl}/api/forecast`, {
         method: 'POST',
         headers: {
@@ -133,7 +150,20 @@ export const AIForecast: React.FC<AIForecastProps> = ({ pizzas, bases, toppings 
         throw new Error(`Server returned error status ${response.status}`);
       }
 
-      const data = await response.json();
+      // Check if response is JSON to avoid JSON parsing errors (e.g. from 404 HTML fallback)
+      const contentType = response.headers.get("content-type");
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const textResponse = await response.text();
+        console.error("Non-JSON API Response received:", textResponse);
+        if (textResponse.trim().startsWith("<") || textResponse.trim().startsWith("<!doctype") || textResponse.trim().startsWith("<html")) {
+          throw new Error("The backend returned an HTML page (likely a router fallback or 404) instead of JSON. Please ensure your VITE_API_URL is set correctly in Vercel settings to point to your live backend server (e.g., https://ais-pre-g5zslltn4ktu4yrtcsbpi4-927174755944.asia-east1.run.app).");
+        }
+        throw new Error(`The backend returned an unexpected response format: ${textResponse.substring(0, 150)}...`);
+      }
+      
       setForecast(data);
     } catch (err: any) {
       console.error(err);
